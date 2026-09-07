@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+.git
+.gitignore
+.github
+.idea
+*.iml
+.vscode
+.env
+*.log
+README.md
+Dockerfile
+docker-compose.yml
