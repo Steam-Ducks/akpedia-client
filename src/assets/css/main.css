@@ -1,0 +1,37 @@
+@import './reset.css';
+@import './pallete.css';
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --color-primary: var(--color-wine);
+    --color-text: var(--color-black);
+    --color-background: var(--color-grey-lighest);
+    --color-border: var(--color-wine-faded);
+    
+    --font-sm: 13px;
+    --font-md: 16px;
+    --font-lg: 24px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body, #app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+body, #app {
+    margin: 0;
+}
+
+#app {
+    color: var(--color-text);
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-size: var(--font-md);
+    background-color: var(--color-background);
+    display: flex;
+    flex-direction: column;
+}

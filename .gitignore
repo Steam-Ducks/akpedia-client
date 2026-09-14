@@ -23,3 +23,10 @@ pnpm-debug.log*
 # Ambiente
 .env
 .env.*.local
+
+# Rotas geradas pelo unplugin-vue-router
+typed-router.d.ts
+
+# Tipos geradas pelo unplugin-auto-import / unplugin-vue-components
+src/auto-imports.d.ts
+src/components.d.ts

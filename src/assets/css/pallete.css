@@ -1,0 +1,25 @@
+:root {
+    --color-white: #f7f7f6;
+    --color-grey-lighest: #e3e5e5;
+    --color-black: #212123;
+    --color-black-faded: #65656b;
+
+    --color-wine: #711d3c;
+    --color-wine-faded: #a8738880;
+
+    --unit: 4px;
+    
+    --spacing-1: var(--unit);
+    --spacing-2: calc(var(--unit) * 2);
+    --spacing-3: calc(var(--unit) * 3);
+    --spacing-4: calc(var(--unit) * 4);
+    --spacing-5: calc(var(--unit) * 5);
+    --spacing-6: calc(var(--unit) * 6);
+    --spacing-7: calc(var(--unit) * 7);
+    --spacing-8: calc(var(--unit) * 8);
+
+    --round-sm: 4px;
+    --round-md: 8px;
+    --round-lg: 12px;
+    --round-pill: 9999px;
+}
