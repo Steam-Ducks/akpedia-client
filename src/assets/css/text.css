@@ -1,0 +1,42 @@
+html {
+  font-size: var(--font-md);
+}
+
+.text-title-large {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 2.5rem;
+  letter-spacing: 0;
+}
+
+.text-title-small {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5rem (24px);
+  letter-spacing: 0.009375rem (0.15px);
+}
+
+.text-label-small {
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1rem;
+  letter-spacing: 0.03125rem;
+}
+
+.text-button {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1rem;
+}
+
+.text-highlight {
+  color: var(--color-primary);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-bold {
+  font-weight: 600;
+}

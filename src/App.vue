@@ -1,20 +1,24 @@
-<script setup lang="ts">
-import HealthStatus from '@/components/HealthStatus.vue'
-</script>
+<script setup lang="ts"></script>
 
 <template>
-  <main class="app">
-    <h1>Akpedia</h1>
-    <p>Interface do usuário para cadastro e busca semântica de documentos.</p>
-    <HealthStatus />
-  </main>
+  <div class="akpedia-page">
+    <AkSidebar />
+    <div class="main-section">
+      <AkHeader />
+      <RouterView />
+    </div>
+  </div>
 </template>
 
-<style scoped>
-.app {
-  max-width: 40rem;
-  margin: 4rem auto;
-  padding: 0 1rem;
-  font-family: system-ui, sans-serif;
+<style lang="css" scoped>
+.akpedia-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+}
+.main-section {
+  flex: 1;
 }
 </style>
