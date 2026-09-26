@@ -3,10 +3,15 @@ import { ArrowUpRight, Search } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
 import { useResultStore } from '@/stores/result-store'
 
-const resultStore = useResultStore()
-const { status } = storeToRefs(resultStore)
+type Props = {
+  /** A single slim line, for narrow columns: no header and an icon-only submit button. */
+  compact?: boolean
+}
 
-const query = ref('')
+defineProps<Props>()
+
+const resultStore = useResultStore()
+const { query, status } = storeToRefs(resultStore)
 
 function submit() {
   resultStore.search(query.value)
@@ -14,21 +19,27 @@ function submit() {
 </script>
 
 <template>
-  <form class="searchbox-wrapper" @submit.prevent="submit">
-    <div class="searchbox-header">Busca Inteligente</div>
+  <form class="searchbox-wrapper" :class="{ compact }" @submit.prevent="submit">
+    <div v-if="!compact" class="searchbox-header">Busca Inteligente</div>
     <div class="searchbox-search-line">
       <AkInput
         v-model="query"
         class="flex-1"
         type="search"
-        placeholder="Busque por uma palavra, frase ou pergunta"
+        :placeholder="compact ? 'Buscar documentos' : 'Busque por uma palavra, frase ou pergunta'"
       >
         <template #pre>
-          <Search />
+          <Search :size="compact ? 17 : 24" />
         </template>
       </AkInput>
-      <AkButton type="submit" :disabled="status === 'loading' || !query.trim()">
-        Buscar documentos <ArrowUpRight :size="19" />
+      <AkButton
+        type="submit"
+        :icon="compact"
+        :disabled="status === 'loading' || !query.trim()"
+        :title="compact ? 'Buscar documentos' : undefined"
+      >
+        <template v-if="!compact">Buscar documentos</template>
+        <ArrowUpRight :size="19" />
       </AkButton>
     </div>
   </form>
@@ -77,5 +88,21 @@ function submit() {
   width: 100%;
   display: flex;
   gap: var(--spacing-5);
+}
+
+.searchbox-wrapper.compact {
+  padding: var(--spacing-2);
+}
+.searchbox-wrapper.compact::after {
+  width: 200px;
+}
+.compact .searchbox-search-line {
+  align-items: center;
+  gap: var(--spacing-2);
+}
+.compact :deep(.ak-input) {
+  padding: var(--spacing-2) var(--spacing-3);
+  gap: var(--spacing-2);
+  font-size: var(--font-md);
 }
 </style>

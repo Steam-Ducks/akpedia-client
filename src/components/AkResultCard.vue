@@ -14,7 +14,7 @@ const props = defineProps<Props>()
 
 const router = useRouter()
 const resultStore = useResultStore()
-const { result: selectedResult } = storeToRefs(resultStore)
+const { result: selectedResult, query } = storeToRefs(resultStore)
 
 const documentData = computed(() => props.payload.documentData)
 const updatedAgo = computed(() => formatUpdatedAgo(documentData.value.lastUpdate))
@@ -25,7 +25,8 @@ function selectResult() {
 }
 
 function openDocument() {
-  router.push(`/docs/${documentData.value.id}`)
+  const q = query.value.trim()
+  router.push({ path: `/docs/${documentData.value.id}`, query: q ? { q } : {} })
 }
 </script>
 

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ArrowLeft, EyeOff, ZoomIn, ZoomOut } from '@lucide/vue'
+import { storeToRefs } from 'pinia'
 import {
   fetchDocumentPage,
   fetchDocumentPreview,
   type DocumentPreview,
 } from '@/services/document-viewer'
 import { viewerFrameHtml, type FromFrame, type ToFrame } from '@/services/viewer-frame'
+import { useResultStore } from '@/stores/result-store'
 
 /** How long the pages stay hidden after a screen capture key is seen. */
 const CAPTURE_SHIELD_MS = 2000
@@ -16,6 +18,15 @@ const ZOOM_STEP = 0.25
 const route = useRoute('/docs/[id]')
 const router = useRouter()
 const documentId = computed(() => Number(route.params.id))
+
+const resultStore = useResultStore()
+const {
+  query,
+  results,
+  recent,
+  status: searchStatus,
+  error: searchError,
+} = storeToRefs(resultStore)
 
 const frame = ref<HTMLIFrameElement | null>(null)
 const preview = ref<DocumentPreview | null>(null)
@@ -164,6 +175,13 @@ onMounted(() => {
   window.addEventListener('focus', unshieldIfFocused)
   document.addEventListener('visibilitychange', onVisibilityChange)
   document.body.classList.add('ak-no-print')
+  if (recent.value.length === 0) resultStore.loadRecent()
+  // A query in the URL (from the home page, or a reloaded/shared link) restores the search.
+  const urlQuery = typeof route.query.q === 'string' ? route.query.q.trim() : ''
+  if (urlQuery && (urlQuery !== query.value.trim() || searchStatus.value === 'idle')) {
+    query.value = urlQuery
+    resultStore.search(urlQuery)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -180,42 +198,66 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="ak-viewer">
-    <div class="viewer-toolbar">
-      <AkButton icon @click="goBack"><ArrowLeft :size="19" /></AkButton>
-      <div class="viewer-title text-title-small">{{ preview?.name ?? 'Documento' }}</div>
-      <template v-if="preview">
-        <div class="text-muted viewer-pages">
-          Página {{ currentPage }} de {{ preview.page_count }}
+    <aside class="viewer-search">
+      <AkSearchbox compact />
+      <div class="search-list">
+        <template v-if="searchStatus === 'idle' && recent.length > 0">
+          <div class="text-muted">Documentos recentes</div>
+          <AkResultCard v-for="item in recent" :key="item.documentData.id" :payload="item" />
+        </template>
+        <div v-else-if="searchStatus === 'loading'" class="text-muted">Buscando documentos…</div>
+        <div v-else-if="searchStatus === 'error'" class="text-muted">{{ searchError }}</div>
+        <div v-else-if="searchStatus === 'done' && results.length === 0" class="text-muted">
+          Nenhum documento encontrado para essa busca.
         </div>
-        <div class="viewer-zoom">
-          <AkButton icon :disabled="zoom <= MIN_ZOOM" @click="setZoom(zoom - ZOOM_STEP)">
-            <ZoomOut :size="19" />
-          </AkButton>
-          <span class="text-muted">{{ Math.round(zoom * 100) }}%</span>
-          <AkButton icon :disabled="zoom >= MAX_ZOOM" @click="setZoom(zoom + ZOOM_STEP)">
-            <ZoomIn :size="19" />
-          </AkButton>
-        </div>
-      </template>
-    </div>
+        <template v-else-if="searchStatus === 'done'">
+          <div class="text-muted">
+            {{ results.length }}
+            {{ results.length === 1 ? 'documento encontrado' : 'documentos encontrados' }}
+          </div>
+          <AkResultCard v-for="item in results" :key="item.documentData.id" :payload="item" />
+        </template>
+      </div>
+    </aside>
 
-    <div class="viewer-body">
-      <div v-if="error" class="viewer-message text-muted">{{ error }}</div>
-      <div v-else-if="!preview" class="viewer-message text-muted">Abrindo documento…</div>
-      <iframe
-        v-show="preview && !error"
-        ref="frame"
-        class="viewer-frame"
-        :class="{ shielded }"
-        title="Visualizador de documento"
-        sandbox="allow-scripts"
-        referrerpolicy="no-referrer"
-        :srcdoc="viewerFrameHtml"
-      />
-      <div v-if="shielded && preview" class="viewer-shield" @click="unshieldIfFocused">
-        <EyeOff :size="32" />
-        <div class="text-title-small">Conteúdo protegido</div>
-        <div class="text-muted">Clique aqui para voltar a visualizar o documento.</div>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <AkButton icon @click="goBack"><ArrowLeft :size="19" /></AkButton>
+        <div class="viewer-title text-title-small">{{ preview?.name ?? 'Documento' }}</div>
+        <template v-if="preview">
+          <div class="text-muted viewer-pages">
+            Página {{ currentPage }} de {{ preview.page_count }}
+          </div>
+          <div class="viewer-zoom">
+            <AkButton icon :disabled="zoom <= MIN_ZOOM" @click="setZoom(zoom - ZOOM_STEP)">
+              <ZoomOut :size="19" />
+            </AkButton>
+            <span class="text-muted">{{ Math.round(zoom * 100) }}%</span>
+            <AkButton icon :disabled="zoom >= MAX_ZOOM" @click="setZoom(zoom + ZOOM_STEP)">
+              <ZoomIn :size="19" />
+            </AkButton>
+          </div>
+        </template>
+      </div>
+
+      <div class="viewer-body">
+        <div v-if="error" class="viewer-message text-muted">{{ error }}</div>
+        <div v-else-if="!preview" class="viewer-message text-muted">Abrindo documento…</div>
+        <iframe
+          v-show="preview && !error"
+          ref="frame"
+          class="viewer-frame"
+          :class="{ shielded }"
+          title="Visualizador de documento"
+          sandbox="allow-scripts"
+          referrerpolicy="no-referrer"
+          :srcdoc="viewerFrameHtml"
+        />
+        <div v-if="shielded && preview" class="viewer-shield" @click="unshieldIfFocused">
+          <EyeOff :size="32" />
+          <div class="text-title-small">Conteúdo protegido</div>
+          <div class="text-muted">Clique aqui para voltar a visualizar o documento.</div>
+        </div>
       </div>
     </div>
   </main>
@@ -225,7 +267,33 @@ onBeforeUnmount(() => {
 .ak-viewer {
   height: 100%;
   display: flex;
+}
+
+.viewer-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
+}
+
+.viewer-search {
+  width: 360px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  border-right: 1px solid var(--color-border);
+}
+
+.search-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  font-size: var(--font-md);
 }
 
 .viewer-toolbar {
