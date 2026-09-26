@@ -1,7 +1,18 @@
+<script setup lang="ts">
+type Props = {
+  type?: string
+  placeholder?: string
+}
+
+defineProps<Props>()
+
+const model = defineModel<string>({ default: '' })
+</script>
+
 <template>
   <div class="ak-input">
     <slot name="pre" />
-    <input />
+    <input v-model="model" :type="type" :placeholder="placeholder" />
   </div>
 </template>
 

@@ -17,7 +17,7 @@ const { result: selectedResult } = storeToRefs(resultStore)
 
 const documentData = computed(() => props.payload.documentData)
 const updatedAgo = computed(() => formatUpdatedAgo(documentData.value.lastUpdate))
-const isSelected = computed(() => selectedResult.value?.documentData.docName === documentData.value.docName)
+const isSelected = computed(() => selectedResult.value?.documentData.id === documentData.value.id)
 
 function selectResult() {
     resultStore.setResult(props.payload)
@@ -31,12 +31,11 @@ function selectResult() {
                 <div class="result-badge">
                     {{ documentData.category }}
                 </div>
-                <div>{{ documentData.docName }}</div>
             </div>
             <AkButton icon @click.stop="selectResult"> <ArrowUpRight :size="19" /> </AkButton>
         </div>
         <div class="text-title-small">{{ documentData.title }}</div>
-        <div class="text-muted">{{ documentData.shortDescription }}</div>
+        <div class="text-muted result-description">{{ documentData.shortDescription }}</div>
         <div class="result-footer">
             <div class="text-muted">{{ documentData.responsableName }}</div>
             <div class="text-muted">{{ updatedAgo }}</div>
@@ -94,6 +93,14 @@ function selectResult() {
     background-color: var(--color-primary-selected);
     padding: var(--spacing-1) var(--spacing-3);
     border-radius: var(--round-lg);
+}
+
+.result-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
 }
 
 .result-footer {

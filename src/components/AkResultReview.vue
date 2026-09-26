@@ -6,7 +6,9 @@ import { storeToRefs } from 'pinia'
 const resultStore = useResultStore()
 const { result: payload } = storeToRefs(resultStore)
 
-const computedAccuracy = computed(() => (payload.value?.accuracy || 0) * 100)
+const computedAccuracy = computed(() =>
+    payload.value?.accuracy === undefined ? null : Math.round(payload.value.accuracy * 100),
+)
 </script>
 
 <template>
@@ -14,7 +16,6 @@ const computedAccuracy = computed(() => (payload.value?.accuracy || 0) * 100)
         <template v-if="payload">
 
             <div class="overview-descriptors">
-                <div class="text-muted descriptor-name">{{ payload.documentData.docName }}</div>
                 <div class="text-title-small">{{ payload.documentData.title }}</div>
                 <div class="text-muted">{{ payload.documentData.shortDescription }}</div>
             </div>
@@ -27,7 +28,7 @@ const computedAccuracy = computed(() => (payload.value?.accuracy || 0) * 100)
                     <div class="text-muted">Responsável</div>
                     <div class="text-bold">{{ payload.documentData.responsableName }}</div>
                 </div>
-                <div class="details-line">
+                <div v-if="computedAccuracy !== null" class="details-line">
                     <div class="text-muted">Relevância</div>
                     <div class="text-bold text-highlight">{{ computedAccuracy }}% de Relevância</div>
                 </div>
@@ -39,6 +40,8 @@ const computedAccuracy = computed(() => (payload.value?.accuracy || 0) * 100)
 
 <style lang="css" scoped>
 .ak-result-overview {
+    position: sticky;
+    top: var(--spacing-4);
     width: 300px;
     border: 1px solid var(--color-border);
     background-color: var(--color-foreground);
@@ -55,10 +58,6 @@ const computedAccuracy = computed(() => (payload.value?.accuracy || 0) * 100)
     margin-bottom: var(--spacing-3);
 }
 
-.descriptor-name {
-    font-weight: 600;
-    font-size: var(--font-sm);
-}
 
 .overview-details {
     display: flex;

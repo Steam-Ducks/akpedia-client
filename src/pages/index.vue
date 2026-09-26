@@ -1,44 +1,14 @@
 <script setup lang="ts">
-import type { ResultPayload } from '@/types/DocData';
+import { storeToRefs } from 'pinia'
+import { useResultStore } from '@/stores/result-store'
+
 const userName = 'Camila'
 const empresaName = 'Akaer'
 
-const resultList: ResultPayload[] = [
-  {
-    documentData: {
-      title: 'Manual de Integração do Sistema de Navegação',
-      docName: 'AKA-ENG-042',
-      shortDescription: 'Procedimentos para integração, configuração e validação do sistema de navegação embarcado.',
-      responsableName: 'Mariana Costa',
-      lastUpdate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      category: 'Técnica'
-    },
-    accuracy: 0.98
-  },
-  {
-    documentData: {
-      title: 'Diretriz de Gestão de Riscos de Projeto',
-      docName: 'AKA-NOR-018',
-      shortDescription: 'Diretrizes para identificar, avaliar, tratar e acompanhar riscos ao longo do ciclo do projeto.',
-      responsableName: 'Rafael Mendes',
-      lastUpdate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      category: 'Normativa'
-    },
-    accuracy: 0.95
-  },
-  {
-    documentData: {
-      title: 'Termo de Confidencialidade — Fornecedores',
-      docName: 'AKA-JUR-007',
-      shortDescription: 'Modelo padrão para formalização de confidencialidade com fornecedores e parceiros estratégicos.',
-      responsableName: 'Luiza Araújo',
-      lastUpdate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      category: 'Jurídica'
-    },
-    accuracy: 0.91
-  }
-]
+const resultStore = useResultStore()
+const { results, recent, status, error } = storeToRefs(resultStore)
 
+onMounted(() => resultStore.loadRecent())
 </script>
 
 <template>
@@ -55,7 +25,22 @@ const resultList: ResultPayload[] = [
     <AkSearchbox />
     <div class="result-section">
       <div class="result-list">
-        <AkResultCard v-for="(result, i) in resultList" :key="i" :payload="result" />
+        <template v-if="status === 'idle' && recent.length > 0">
+          <div class="text-muted">Documentos recentes</div>
+          <AkResultCard v-for="item in recent" :key="item.documentData.id" :payload="item" />
+        </template>
+        <div v-else-if="status === 'loading'" class="text-muted">Buscando documentos…</div>
+        <div v-else-if="status === 'error'" class="text-muted">{{ error }}</div>
+        <div v-else-if="status === 'done' && results.length === 0" class="text-muted">
+          Nenhum documento encontrado para essa busca.
+        </div>
+        <template v-else-if="status === 'done'">
+          <div class="text-muted">
+            {{ results.length }}
+            {{ results.length === 1 ? 'documento encontrado' : 'documentos encontrados' }}
+          </div>
+          <AkResultCard v-for="item in results" :key="item.documentData.id" :payload="item" />
+        </template>
       </div>
     </div>
   </main>
@@ -86,6 +71,7 @@ const resultList: ResultPayload[] = [
 }
 .result-section {
   display: flex;
+  align-items: flex-start;
   gap: var(--spacing-4);
 }
 

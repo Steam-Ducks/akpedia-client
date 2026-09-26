@@ -15,6 +15,7 @@ defineProps<Props>()
 
 <style lang="css" scoped>
 .ak-button {
+  position: relative;
   background-color: var(--color-black);
   padding: var(--spacing-3) var(--spacing-5);
   border-radius: var(--round-lg);

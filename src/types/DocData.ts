@@ -1,7 +1,7 @@
 export type DocData = {
+    id: number
     title: string
     category: string
-    docName: string
     shortDescription: string
     responsableName: string
     lastUpdate: Date
@@ -9,5 +9,6 @@ export type DocData = {
 
 export type ResultPayload = {
     documentData: DocData
-    accuracy: number
+    /** Relevance of a search result; absent when the document was not found by a search. */
+    accuracy?: number
 }

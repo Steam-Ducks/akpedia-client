@@ -1,6 +1,10 @@
 export function formatUpdatedAgo(date: Date): string {
     const diffDays = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
 
+    if (diffDays === 0) {
+        return 'atualizado hoje'
+    }
+
     if (diffDays < 30) {
         return `atualizado há ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`
     }
