@@ -12,6 +12,7 @@ type Props = {
 
 const props = defineProps<Props>()
 
+const router = useRouter()
 const resultStore = useResultStore()
 const { result: selectedResult } = storeToRefs(resultStore)
 
@@ -21,6 +22,10 @@ const isSelected = computed(() => selectedResult.value?.documentData.id === docu
 
 function selectResult() {
     resultStore.setResult(props.payload)
+}
+
+function openDocument() {
+    router.push(`/docs/${documentData.value.id}`)
 }
 </script>
 
@@ -32,7 +37,7 @@ function selectResult() {
                     {{ documentData.category }}
                 </div>
             </div>
-            <AkButton icon @click.stop="selectResult"> <ArrowUpRight :size="19" /> </AkButton>
+            <AkButton icon @click.stop="openDocument"> <ArrowUpRight :size="19" /> </AkButton>
         </div>
         <div class="text-title-small">{{ documentData.title }}</div>
         <div class="text-muted result-description">{{ documentData.shortDescription }}</div>
