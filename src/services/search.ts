@@ -27,7 +27,3 @@ export function fetchRecentDocuments(): Promise<DocumentSummary[]> {
   const params = new URLSearchParams({ limit: String(RECENT_LIMIT) })
   return getJson('/api/v1/documents', params, 'Não foi possível carregar os documentos')
 }
-
-export function documentFileUrl(documentId: number): string {
-  return `${API_BASE_URL}/api/v1/documents/${documentId}/file`
-}

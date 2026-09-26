@@ -2,8 +2,8 @@
 import { computed } from 'vue'
 import { useResultStore } from '@/stores/result-store'
 import { storeToRefs } from 'pinia'
-import { documentFileUrl } from '@/services/search'
 
+const router = useRouter()
 const resultStore = useResultStore()
 const { result: payload } = storeToRefs(resultStore)
 
@@ -13,7 +13,7 @@ const computedAccuracy = computed(() =>
 
 function openDocument() {
   if (payload.value) {
-    window.open(documentFileUrl(payload.value.documentData.id), '_blank', 'noopener')
+    router.push(`/docs/${payload.value.documentData.id}`)
   }
 }
 </script>
