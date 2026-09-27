@@ -1,6 +1,14 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
+import { useResultStore } from '@/stores/result-store'
+
 const userName = 'Camila'
 const empresaName = 'Akaer'
+
+const resultStore = useResultStore()
+const { results, recent, status, error } = storeToRefs(resultStore)
+
+onMounted(() => resultStore.loadRecent())
 </script>
 
 <template>
@@ -15,6 +23,26 @@ const empresaName = 'Akaer'
       </div>
     </div>
     <AkSearchbox />
+    <div class="result-section">
+      <div class="result-list">
+        <template v-if="status === 'idle' && recent.length > 0">
+          <div class="text-muted">Documentos recentes</div>
+          <AkResultCard v-for="item in recent" :key="item.documentData.id" :payload="item" />
+        </template>
+        <div v-else-if="status === 'loading'" class="text-muted">Buscando documentos…</div>
+        <div v-else-if="status === 'error'" class="text-muted">{{ error }}</div>
+        <div v-else-if="status === 'done' && results.length === 0" class="text-muted">
+          Nenhum documento encontrado para essa busca.
+        </div>
+        <template v-else-if="status === 'done'">
+          <div class="text-muted">
+            {{ results.length }}
+            {{ results.length === 1 ? 'documento encontrado' : 'documentos encontrados' }}
+          </div>
+          <AkResultCard v-for="item in results" :key="item.documentData.id" :payload="item" />
+        </template>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -40,5 +68,17 @@ const empresaName = 'Akaer'
 }
 .salutation-description {
   color: var(--color-text-muted);
+}
+.result-section {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+}
+
+.result-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
 }
 </style>

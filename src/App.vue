@@ -5,7 +5,9 @@
     <AkSidebar />
     <div class="main-section">
       <AkHeader />
-      <RouterView />
+      <div class="main-content">
+        <RouterView />
+      </div>
     </div>
   </div>
 </template>
@@ -20,5 +22,13 @@
 }
 .main-section {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.main-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 </style>

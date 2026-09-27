@@ -1,20 +1,37 @@
 <script setup lang="ts">
-import { Search } from '@lucide/vue'
-import { ArrowUpRight } from '@lucide/vue'
+import { ArrowUpRight, Search } from '@lucide/vue'
+import { storeToRefs } from 'pinia'
+import { useResultStore } from '@/stores/result-store'
+
+const resultStore = useResultStore()
+const { status } = storeToRefs(resultStore)
+
+const query = ref('')
+
+function submit() {
+  resultStore.search(query.value)
+}
 </script>
 
 <template>
-  <div class="searchbox-wrapper">
+  <form class="searchbox-wrapper" @submit.prevent="submit">
     <div class="searchbox-header">Busca Inteligente</div>
     <div class="searchbox-search-line">
-      <AkInput class="flex-1">
+      <AkInput
+        v-model="query"
+        class="flex-1"
+        type="search"
+        placeholder="Busque por uma palavra, frase ou pergunta"
+      >
         <template #pre>
           <Search />
         </template>
       </AkInput>
-      <AkButton>Buscar documentos <ArrowUpRight :size="19" /></AkButton>
+      <AkButton type="submit" :disabled="status === 'loading' || !query.trim()">
+        Buscar documentos <ArrowUpRight :size="19" />
+      </AkButton>
     </div>
-  </div>
+  </form>
 </template>
 
 <style lang="css" scoped>
