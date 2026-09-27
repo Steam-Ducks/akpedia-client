@@ -14,7 +14,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "vue": "^3.5.13"
+    "@lucide/vue": "^1.46.0",
+    "pinia": "^4.0.3",
+    "vue": "^3.5.13",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
@@ -27,6 +30,9 @@
     "jsdom": "^25.0.1",
     "prettier": "^3.4.2",
     "typescript": "~5.7.3",
+    "unplugin-auto-import": "^21.1.0",
+    "unplugin-vue-components": "^32.1.0",
+    "unplugin-vue-router": "^0.19.2",
     "vite": "^6.0.7",
     "vitest": "^3.2.4",
     "vue-tsc": "^2.2.0"
