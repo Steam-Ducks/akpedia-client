@@ -3,12 +3,19 @@ import { computed } from 'vue'
 import { useResultStore } from '@/stores/result-store'
 import { storeToRefs } from 'pinia'
 
+const router = useRouter()
 const resultStore = useResultStore()
 const { result: payload } = storeToRefs(resultStore)
 
 const computedAccuracy = computed(() =>
   payload.value?.accuracy === undefined ? null : Math.round(payload.value.accuracy * 100),
 )
+
+function openDocument() {
+  if (payload.value) {
+    router.push(`/docs/${payload.value.documentData.id}`)
+  }
+}
 </script>
 
 <template>
@@ -32,7 +39,9 @@ const computedAccuracy = computed(() =>
           <div class="text-bold text-highlight">{{ computedAccuracy }}% de Relevância</div>
         </div>
       </div>
-      <AkButton class="result-button" color="primary">Abrir documento</AkButton>
+      <AkButton class="result-button" color="primary" @click="openDocument"
+        >Abrir documento</AkButton
+      >
     </template>
   </div>
 </template>

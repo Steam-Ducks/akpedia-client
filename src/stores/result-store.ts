@@ -7,6 +7,8 @@ import { toResultPayload } from '@/services/search-mapper'
 type SearchStatus = 'idle' | 'loading' | 'done' | 'error'
 
 export const useResultStore = defineStore('result', () => {
+  /** Kept here so the searched text survives moving between pages. */
+  const query = ref('')
   const results = ref<ResultPayload[]>([])
   /** Documents shown before anything is searched. */
   const recent = ref<ResultPayload[]>([])
@@ -54,5 +56,5 @@ export const useResultStore = defineStore('result', () => {
     result.value = newResult
   }
 
-  return { results, recent, result, status, error, search, loadRecent, setResult }
+  return { query, results, recent, result, status, error, search, loadRecent, setResult }
 })
