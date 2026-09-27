@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 
 export type NavEntry = {
   to: string
   display: string
+  disabled?: boolean
 }
 type Props = {
   title: string
@@ -23,11 +24,16 @@ function isActive(to: string) {
   <div class="sidebar-nav">
     <span class="sidebar-nav-title text-label-small">{{ title }}</span>
     <nav class="sidebar-nav-content">
-      <RouterLink
-        :to="to"
+      <component
+        :is="disabled ? 'span' : RouterLink"
+        :to="disabled ? undefined : to"
         class="sidebar-nav-item text-button"
-        :class="{ 'sidebar-nav-item--active': isActive(to) }"
-        v-for="{ to, display } in entryList"
+        :class="{
+          'sidebar-nav-item--active': !disabled && isActive(to),
+          'sidebar-nav-item--disabled': disabled,
+        }"
+        :aria-disabled="disabled || undefined"
+        v-for="{ to, display, disabled } in entryList"
         :key="to"
       >
         <svg
@@ -49,7 +55,7 @@ function isActive(to: string) {
           <rect width="7" height="5" x="3" y="16" rx="1"></rect>
         </svg>
         {{ display }}
-      </RouterLink>
+      </component>
     </nav>
   </div>
 </template>
@@ -87,7 +93,12 @@ function isActive(to: string) {
   transition: all 200ms ease;
 }
 
-.sidebar-nav-item:hover:not(.sidebar-nav-item--active) {
+.sidebar-nav-item--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sidebar-nav-item:hover:not(.sidebar-nav-item--active, .sidebar-nav-item--disabled) {
   color: var(--color-text);
   background-color: var(--color-background-hover);
 }
