@@ -20,18 +20,15 @@ const documentData = computed(() => props.payload.documentData)
 const updatedAgo = computed(() => formatUpdatedAgo(documentData.value.lastUpdate))
 const isSelected = computed(() => selectedResult.value?.documentData.id === documentData.value.id)
 
-function selectResult() {
+const openDocument = () => {
   resultStore.setResult(props.payload)
-}
-
-function openDocument() {
   const q = query.value.trim()
   router.push({ path: `/docs/${documentData.value.id}`, query: q ? { q } : {} })
 }
 </script>
 
 <template>
-  <div class="result-card" :class="{ selected: isSelected }" @click="selectResult">
+  <div class="result-card" :class="{ selected: isSelected }" @click="openDocument">
     <div class="result-header">
       <div class="result-infos">
         <div class="result-badge">
