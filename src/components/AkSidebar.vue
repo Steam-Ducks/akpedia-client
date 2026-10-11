@@ -23,6 +23,10 @@ const explorerMenuEntryList: NavEntry[] = [
     display: 'Documentos',
     disabled: true,
   },
+  {
+    to: '/upload',
+    display: 'Enviar documento',
+  },
 ]
 </script>
 
