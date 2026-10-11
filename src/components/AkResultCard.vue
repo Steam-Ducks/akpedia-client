@@ -35,7 +35,9 @@ const openDocument = () => {
           {{ documentData.category }}
         </div>
       </div>
-      <AkButton icon @click.stop="openDocument"> <ArrowUpRight :size="19" /> </AkButton>
+      <AkButton class="open-button" icon @click.stop="openDocument">
+        <ArrowUpRight :size="19" />
+      </AkButton>
     </div>
     <div class="text-title-small">{{ documentData.title }}</div>
     <div class="text-muted result-description">{{ documentData.shortDescription }}</div>
@@ -84,6 +86,15 @@ const openDocument = () => {
 .result-header {
   display: flex;
   justify-content: space-between;
+}
+
+.result-card .open-button {
+  background-color: transparent;
+  color: var(--color-primary);
+}
+
+.result-card .open-button:hover {
+  background-color: var(--color-primary-selected);
 }
 
 .result-badge {
