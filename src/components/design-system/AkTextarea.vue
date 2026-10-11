@@ -20,16 +20,23 @@ const model = defineModel<string>({ default: '' })
   background-color: var(--color-input-background);
   display: flex;
   padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
   border-radius: var(--round-lg);
   color: var(--color-text);
+  transition: border-color 0.2s ease;
 
   textarea {
     width: 100%;
     background: transparent;
     border: none;
+    outline: none;
     color: inherit;
     font: inherit;
     resize: vertical;
   }
+}
+
+.ak-textarea:focus-within {
+  border-color: var(--color-primary);
 }
 </style>

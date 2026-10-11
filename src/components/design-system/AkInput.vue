@@ -23,11 +23,18 @@ const model = defineModel<string>({ default: '' })
   align-items: center;
   gap: var(--spacing-4);
   padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
   border-radius: var(--round-lg);
   color: var(--color-text);
+  transition: border-color 0.2s ease;
 
   input {
     width: 100%;
+    outline: none;
   }
+}
+
+.ak-input:focus-within {
+  border-color: var(--color-primary);
 }
 </style>
