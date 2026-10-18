@@ -52,17 +52,14 @@ function submit() {
       </AkButton>
     </div>
     <div v-if="categories.length > 0" class="searchbox-categories">
-      <button
+      <AkChip
         v-for="category in categories"
         :key="category.id"
-        type="button"
-        class="category-chip"
-        :class="{ selected: categoryIds.includes(category.id) }"
-        :aria-pressed="categoryIds.includes(category.id)"
+        :selected="categoryIds.includes(category.id)"
         @click="resultStore.toggleCategory(category.id)"
       >
         {{ category.name }}
-      </button>
+      </AkChip>
     </div>
   </form>
 </template>
@@ -115,22 +112,6 @@ function submit() {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-2);
-}
-.category-chip {
-  cursor: pointer;
-  border: 1px solid rgba(from var(--color-white) r g b / 0.4);
-  border-radius: var(--round-lg);
-  padding: var(--spacing-1) var(--spacing-3);
-  background: transparent;
-  color: var(--color-white);
-  font-size: var(--font-sm);
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-.category-chip.selected {
-  background: var(--color-white);
-  color: var(--color-primary);
-  border-color: var(--color-white);
 }
 
 .searchbox-wrapper.compact {

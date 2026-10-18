@@ -20,7 +20,7 @@ describe('AkSearchbox', () => {
 
     const wrapper = mount(AkSearchbox)
     await vi.waitFor(() => {
-      expect(wrapper.findAll('.category-chip')).toHaveLength(2)
+      expect(wrapper.findAll('.ak-chip')).toHaveLength(2)
     })
     expect(wrapper.text()).toContain('Engenharia')
     expect(wrapper.text()).toContain('Normativa')
@@ -30,24 +30,24 @@ describe('AkSearchbox', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => categories }))
 
     const wrapper = mount(AkSearchbox)
-    await vi.waitFor(() => expect(wrapper.findAll('.category-chip')).toHaveLength(2))
+    await vi.waitFor(() => expect(wrapper.findAll('.ak-chip')).toHaveLength(2))
 
     const store = useResultStore()
-    await wrapper.find('.category-chip').trigger('click')
+    await wrapper.find('.ak-chip').trigger('click')
 
     expect(store.categoryIds).toEqual([1])
-    expect(wrapper.find('.category-chip').classes()).toContain('selected')
+    expect(wrapper.find('.ak-chip').classes()).toContain('selected')
   })
 
   it('o botão de busca fica habilitado com apenas uma categoria selecionada, sem texto', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => categories }))
 
     const wrapper = mount(AkSearchbox)
-    await vi.waitFor(() => expect(wrapper.findAll('.category-chip')).toHaveLength(2))
+    await vi.waitFor(() => expect(wrapper.findAll('.ak-chip')).toHaveLength(2))
 
     expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
 
-    await wrapper.find('.category-chip').trigger('click')
+    await wrapper.find('.ak-chip').trigger('click')
 
     await vi.waitFor(() => {
       expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeUndefined()
@@ -60,8 +60,8 @@ describe('AkSearchbox', () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => categories })
 
     const wrapper = mount(AkSearchbox)
-    await vi.waitFor(() => expect(wrapper.findAll('.category-chip')).toHaveLength(2))
-    await wrapper.find('.category-chip').trigger('click')
+    await vi.waitFor(() => expect(wrapper.findAll('.ak-chip')).toHaveLength(2))
+    await wrapper.find('.ak-chip').trigger('click')
 
     const callsBeforeSubmit = fetchMock.mock.calls.length
     await wrapper.get('input').setValue('manual')
