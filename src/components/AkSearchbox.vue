@@ -126,4 +126,9 @@ function submit() {
   gap: var(--spacing-2);
   font-size: var(--font-md);
 }
+.compact :deep(.ak-accordion-header),
+.compact :deep(.ak-accordion-content) {
+  padding-left: var(--spacing-3);
+  padding-right: var(--spacing-3);
+}
 </style>
