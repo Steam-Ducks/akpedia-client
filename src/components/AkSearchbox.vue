@@ -51,16 +51,19 @@ function submit() {
         <ArrowUpRight :size="19" />
       </AkButton>
     </div>
-    <div v-if="categories.length > 0" class="searchbox-categories">
-      <AkChip
-        v-for="category in categories"
-        :key="category.id"
-        :selected="categoryIds.includes(category.id)"
-        @click="resultStore.toggleCategory(category.id)"
-      >
-        {{ category.name }}
-      </AkChip>
-    </div>
+    <AkAccordion v-if="compact && categories.length > 0" title="Categorias">
+      <CategoryChips
+        :categories="categories"
+        :selected-ids="categoryIds"
+        @toggle="resultStore.toggleCategory"
+      />
+    </AkAccordion>
+    <CategoryChips
+      v-else-if="categories.length > 0"
+      :categories="categories"
+      :selected-ids="categoryIds"
+      @toggle="resultStore.toggleCategory"
+    />
   </form>
 </template>
 
@@ -108,12 +111,6 @@ function submit() {
   display: flex;
   gap: var(--spacing-5);
 }
-.searchbox-categories {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
-}
-
 .searchbox-wrapper.compact {
   padding: var(--spacing-2);
 }

@@ -73,4 +73,26 @@ describe('AkSearchbox', () => {
     expect(url.searchParams.get('q')).toBe('manual')
     expect(url.searchParams.getAll('categoryIds')).toEqual(['1'])
   })
+
+  it('a versão completa mostra os chips de categoria direto, sem acordeão', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => categories }))
+
+    const wrapper = mount(AkSearchbox)
+    await vi.waitFor(() => expect(wrapper.findAll('.ak-chip')).toHaveLength(2))
+
+    expect(wrapper.find('.ak-accordion').exists()).toBe(false)
+  })
+
+  it('a versão compacta esconde os chips de categoria dentro de um acordeão fechado', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => categories }))
+
+    const wrapper = mount(AkSearchbox, { props: { compact: true } })
+    await vi.waitFor(() => expect(wrapper.find('.ak-accordion').exists()).toBe(true))
+
+    expect(wrapper.findAll('.ak-chip')).toHaveLength(0)
+
+    await wrapper.get('.ak-accordion-header').trigger('click')
+
+    expect(wrapper.findAll('.ak-chip')).toHaveLength(2)
+  })
 })
