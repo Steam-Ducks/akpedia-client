@@ -11,10 +11,19 @@ type Props = {
 defineProps<Props>()
 
 const resultStore = useResultStore()
-const { query, status } = storeToRefs(resultStore)
+const { query, categoryIds, categories, status } = storeToRefs(resultStore)
+
+onMounted(() => {
+  if (categories.value.length === 0) {
+    resultStore.loadCategories()
+  }
+})
+
+const canSubmit = computed(() => query.value.trim() !== '' || categoryIds.value.length > 0)
 
 function submit() {
-  resultStore.search(query.value)
+  if (!canSubmit.value) return
+  resultStore.search(query.value, categoryIds.value)
 }
 </script>
 
@@ -35,12 +44,25 @@ function submit() {
       <AkButton
         type="submit"
         :icon="compact"
-        :disabled="status === 'loading' || !query.trim()"
+        :disabled="status === 'loading' || !canSubmit"
         :title="compact ? 'Buscar documentos' : undefined"
       >
         <template v-if="!compact">Buscar documentos</template>
         <ArrowUpRight :size="19" />
       </AkButton>
+    </div>
+    <div v-if="categories.length > 0" class="searchbox-categories">
+      <button
+        v-for="category in categories"
+        :key="category.id"
+        type="button"
+        class="category-chip"
+        :class="{ selected: categoryIds.includes(category.id) }"
+        :aria-pressed="categoryIds.includes(category.id)"
+        @click="resultStore.toggleCategory(category.id)"
+      >
+        {{ category.name }}
+      </button>
     </div>
   </form>
 </template>
@@ -88,6 +110,27 @@ function submit() {
   width: 100%;
   display: flex;
   gap: var(--spacing-5);
+}
+.searchbox-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+.category-chip {
+  cursor: pointer;
+  border: 1px solid rgba(from var(--color-white) r g b / 0.4);
+  border-radius: var(--round-lg);
+  padding: var(--spacing-1) var(--spacing-3);
+  background: transparent;
+  color: var(--color-white);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.category-chip.selected {
+  background: var(--color-white);
+  color: var(--color-primary);
+  border-color: var(--color-white);
 }
 
 .searchbox-wrapper.compact {

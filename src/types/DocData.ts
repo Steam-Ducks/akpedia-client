@@ -9,6 +9,9 @@ export type DocData = {
 
 export type ResultPayload = {
   documentData: DocData
-  /** Relevance of a search result; absent when the document was not found by a search. */
-  accuracy?: number
+  /**
+   * Relevance of a search result; absent when the document was not found by a search, null when
+   * the search had no text to compare against, such as a category filter used alone.
+   */
+  accuracy?: number | null
 }
