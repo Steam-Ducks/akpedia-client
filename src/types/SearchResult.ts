@@ -15,11 +15,18 @@ export type DocumentSummary = {
 
 /** One document returned by `GET /api/v1/search`, represented by its best matching chunk. */
 export type SearchResult = DocumentSummary & {
-  /** Cosine similarity between the query and the matched chunk, from -1 to 1. */
-  score: number
+  /** Cosine similarity between the query and the matched chunk, from -1 to 1; null without `q`. */
+  score: number | null
   matched_chunk: string | null
   /** Position of the matched chunk in the document, counted from 0. */
   chunk_index: number
+}
+
+/** One document category, as `GET /api/v1/categories` lists them. */
+export type Category = {
+  id: number
+  name: string
+  description: string | null
 }
 
 /** Body of every error the API answers. */

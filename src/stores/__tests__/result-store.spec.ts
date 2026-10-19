@@ -125,12 +125,87 @@ describe('result store', () => {
     expect(store.recent[0].documentData.shortDescription).toBe('Manual de teste do akpedia.')
   })
 
-  it('ignora buscas em branco', async () => {
+  it('ignora buscas em branco sem categorias', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
 
     await useResultStore().search('   ')
 
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('busca por categoria mesmo com o texto em branco', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => found })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useResultStore()
+    await store.search('   ', [1, 3])
+
+    const url = new URL(fetchMock.mock.calls[0][0], 'http://localhost')
+    expect(url.searchParams.has('q')).toBe(false)
+    expect(url.searchParams.getAll('categoryIds')).toEqual(['1', '3'])
+    expect(store.status).toBe('done')
+  })
+
+  it('combina texto e categorias na mesma busca', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => found })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useResultStore()
+    await store.search('integração', [2])
+
+    const url = new URL(fetchMock.mock.calls[0][0], 'http://localhost')
+    expect(url.searchParams.get('q')).toBe('integração')
+    expect(url.searchParams.getAll('categoryIds')).toEqual(['2'])
+  })
+
+  it('carrega o catálogo de categorias', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: 1, name: 'Engenharia', description: null },
+        { id: 2, name: 'Normativa', description: 'Políticas internas' },
+      ],
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useResultStore()
+    await store.loadCategories()
+
+    const url = new URL(fetchMock.mock.calls[0][0], 'http://localhost')
+    expect(url.pathname).toBe('/api/v1/categories')
+    expect(store.categories).toHaveLength(2)
+    expect(store.categories[0].name).toBe('Engenharia')
+  })
+
+  it('alterna uma categoria selecionada e busca com a seleção atualizada', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => found })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useResultStore()
+    store.toggleCategory(1)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(store.categoryIds).toEqual([1])
+
+    store.toggleCategory(2)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(store.categoryIds).toEqual([1, 2])
+
+    store.toggleCategory(1)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(store.categoryIds).toEqual([2])
+  })
+
+  it('um resultado de busca só por categoria carrega relevância nula', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ ...found[0], score: null }],
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useResultStore()
+    await store.search('', [1])
+
+    expect(store.results[0].accuracy).toBeNull()
   })
 })

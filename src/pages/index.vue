@@ -5,10 +5,39 @@ import { useResultStore } from '@/stores/result-store'
 const userName = 'Camila'
 const empresaName = 'Akaer'
 
+const route = useRoute('/')
+const router = useRouter()
 const resultStore = useResultStore()
-const { results, recent, status, error } = storeToRefs(resultStore)
+const { query, categoryIds, results, recent, status, error } = storeToRefs(resultStore)
 
-onMounted(() => resultStore.loadRecent())
+/** Parses `?categories=1,3` into category ids, dropping anything that is not a positive integer. */
+function categoryIdsFromRoute(): number[] {
+  const raw = route.query.categories
+  const value = Array.isArray(raw) ? raw[0] : raw
+  if (!value) return []
+  return value
+    .split(',')
+    .map(Number)
+    .filter((id) => Number.isInteger(id) && id > 0)
+}
+
+function syncRouteWithCategories() {
+  router.replace({
+    query: { ...route.query, categories: categoryIds.value.join(',') || undefined },
+  })
+}
+
+watch(categoryIds, syncRouteWithCategories)
+
+onMounted(async () => {
+  const idsFromRoute = categoryIdsFromRoute()
+  if (idsFromRoute.length > 0) {
+    categoryIds.value = idsFromRoute
+    await resultStore.search(query.value, idsFromRoute)
+  } else {
+    resultStore.loadRecent()
+  }
+})
 </script>
 
 <template>
