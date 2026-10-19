@@ -4,19 +4,8 @@ import { storeToRefs } from 'pinia'
 import { useUploadStore } from '@/stores/upload-store'
 
 const uploadStore = useUploadStore()
-const {
-  status,
-  progress,
-  error,
-  categoryId,
-  categoryConfidence,
-  name,
-  description,
-  revision,
-  author,
-  documentDate,
-} = storeToRefs(uploadStore)
-const { categories } = uploadStore
+const { status, error, categories, categoryId, categoryConfidence, name, description } =
+  storeToRefs(uploadStore)
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const fileName = ref('')
@@ -47,6 +36,10 @@ const startOver = () => {
   fileName.value = ''
   uploadStore.reset()
 }
+
+onMounted(() => {
+  uploadStore.loadCategories()
+})
 </script>
 
 <template>
@@ -67,14 +60,17 @@ const startOver = () => {
         </div>
 
         <div class="dropzone" :class="{ busy: status === 'analyzing' }" @click="openPicker">
-          <input ref="fileInput" type="file" class="dropzone-input" @change="onFileChange" />
+          <input
+            ref="fileInput"
+            type="file"
+            class="dropzone-input"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            @change="onFileChange"
+          />
           <template v-if="status === 'analyzing'">
             <FileText :size="32" />
             <div class="text-title-small">{{ fileName }}</div>
-            <div class="progress-track">
-              <div class="progress-fill" :style="{ width: `${progress}%` }" />
-            </div>
-            <div class="text-muted">Lendo o arquivo… {{ progress }}%</div>
+            <div class="text-muted">Analisando o arquivo…</div>
           </template>
           <template v-else>
             <Upload :size="32" />
@@ -97,6 +93,7 @@ const startOver = () => {
           <label class="form-field">
             <span class="text-label-small">Categoria</span>
             <AkSelect v-model="categoryId" required>
+              <option :value="null" disabled>Selecione uma categoria</option>
               <option v-for="category in categories" :key="category.id" :value="category.id">
                 {{ category.name }}
               </option>
@@ -112,21 +109,6 @@ const startOver = () => {
             <span class="text-label-small">Descrição</span>
             <AkTextarea v-model="description" placeholder="Descrição do documento" />
           </label>
-
-          <div class="form-row">
-            <label class="form-field">
-              <span class="text-label-small">Revisão</span>
-              <AkInput v-model="revision" placeholder="Rev. A" />
-            </label>
-            <label class="form-field">
-              <span class="text-label-small">Autor</span>
-              <AkInput v-model="author" placeholder="Nome do autor" />
-            </label>
-            <label class="form-field">
-              <span class="text-label-small">Data de criação</span>
-              <AkInput v-model="documentDate" type="date" />
-            </label>
-          </div>
 
           <div v-if="error" class="upload-feedback upload-feedback--error">
             <CircleAlert :size="19" />
@@ -214,21 +196,6 @@ const startOver = () => {
   pointer-events: none;
 }
 
-.progress-track {
-  width: 100%;
-  max-width: 280px;
-  height: var(--spacing-2);
-  border-radius: var(--round-pill);
-  background-color: var(--color-background-hover);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: var(--color-primary);
-  transition: width 0.2s ease;
-}
-
 .upload-form {
   display: flex;
   flex-direction: column;
@@ -256,11 +223,6 @@ const startOver = () => {
   flex-direction: column;
   gap: var(--spacing-2);
   flex: 1;
-}
-
-.form-row {
-  display: flex;
-  gap: var(--spacing-4);
 }
 
 .form-actions {

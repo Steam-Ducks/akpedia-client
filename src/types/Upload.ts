@@ -1,25 +1,17 @@
-export type Category = {
-  id: number
-  name: string
-}
-
-export type PreAnalysis = {
-  documentId: number
+/** What `POST /api/v1/documents/analyze` suggests, with nothing persisted. */
+export type Analysis = {
+  title: string
+  description: string | null
   suggestedCategoryId: number | null
-  categoryConfidence: number | null
-  name: string
-  description: string
-  revision: string
-  author: string
-  documentDate: string
+  confidence: number | null
 }
 
-export type SubmitDocumentInput = {
-  documentId: number
+/** What `POST /api/v1/documents` takes, besides the author attributed from `VITE_DEFAULT_USER_ID`. */
+export type UploadPayload = {
+  file: File
   categoryId: number
   name: string
   description: string
-  revision: string
-  author: string
-  documentDate: string
+  suggestedCategoryId: number | null
+  categoryConfidence: number | null
 }

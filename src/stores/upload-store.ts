@@ -1,79 +1,89 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { CATEGORIES, preAnalyzeDocument, submitDocument } from '@/services/upload'
-import type { Category } from '@/types/Upload'
+import { analyze, upload, DocumentApiError } from '@/services/documents'
+import { fetchCategories } from '@/services/search'
+import type { Category } from '@/types/SearchResult'
 
-export type UploadStatus = 'idle' | 'analyzing' | 'review' | 'submitting' | 'submitted' | 'error'
+export type UploadStatus = 'idle' | 'analyzing' | 'review' | 'submitting' | 'submitted'
 
 export const useUploadStore = defineStore('upload', () => {
   const status = ref<UploadStatus>('idle')
-  const progress = ref(0)
   const error = ref<string | null>(null)
+  const categories = ref<Category[]>([])
 
-  const documentId = ref<number | null>(null)
+  const file = ref<File | null>(null)
   const categoryId = ref<number | null>(null)
+  /** The classifier's own suggestion, kept apart from `categoryId` so a correction is sent as one. */
+  const suggestedCategoryId = ref<number | null>(null)
   const categoryConfidence = ref<number | null>(null)
   const name = ref('')
   const description = ref('')
-  const revision = ref('')
-  const author = ref('')
-  const documentDate = ref('')
 
-  const categories: Category[] = CATEGORIES
+  async function loadCategories() {
+    try {
+      categories.value = await fetchCategories()
+    } catch {
+      // The select is still usable once the request that populates it succeeds; retrying is on the user.
+      categories.value = []
+    }
+  }
 
-  const reset = () => {
+  function reset() {
     status.value = 'idle'
-    progress.value = 0
     error.value = null
-    documentId.value = null
+    file.value = null
     categoryId.value = null
+    suggestedCategoryId.value = null
     categoryConfidence.value = null
     name.value = ''
     description.value = ''
-    revision.value = ''
-    author.value = ''
-    documentDate.value = ''
   }
 
-  const analyze = async (file: File) => {
+  async function analyzeFile(selected: File) {
     status.value = 'analyzing'
-    progress.value = 0
     error.value = null
+    file.value = selected
 
     try {
-      const result = await preAnalyzeDocument(file, (percent) => {
-        progress.value = percent
-      })
-      documentId.value = result.documentId
+      const result = await analyze(selected)
       categoryId.value = result.suggestedCategoryId
-      categoryConfidence.value = result.categoryConfidence
-      name.value = result.name
-      description.value = result.description
-      revision.value = result.revision
-      author.value = result.author
-      documentDate.value = result.documentDate
+      suggestedCategoryId.value = result.suggestedCategoryId
+      categoryConfidence.value = result.confidence
+      name.value = result.title
+      description.value = result.description ?? ''
       status.value = 'review'
     } catch (e) {
+      if (e instanceof DocumentApiError && e.status === 503) {
+        // The classifier is down, but the file itself is fine: let the user fill the form by hand.
+        categoryId.value = null
+        suggestedCategoryId.value = null
+        categoryConfidence.value = null
+        name.value = ''
+        description.value = ''
+        error.value = e.message
+        status.value = 'review'
+        return
+      }
+
       error.value = e instanceof Error ? e.message : 'Não foi possível ler o arquivo.'
       status.value = 'idle'
     }
   }
 
-  const submit = async () => {
-    if (documentId.value === null || categoryId.value === null) return
+  async function submit() {
+    if (file.value === null || categoryId.value === null) return
 
     status.value = 'submitting'
     error.value = null
 
     try {
-      await submitDocument({
-        documentId: documentId.value,
+      await upload({
+        file: file.value,
         categoryId: categoryId.value,
         name: name.value,
         description: description.value,
-        revision: revision.value,
-        author: author.value,
-        documentDate: documentDate.value,
+        suggestedCategoryId: suggestedCategoryId.value,
+        categoryConfidence: categoryConfidence.value,
       })
       status.value = 'submitted'
     } catch (e) {
@@ -84,18 +94,16 @@ export const useUploadStore = defineStore('upload', () => {
 
   return {
     status,
-    progress,
     error,
     categories,
-    documentId,
+    file,
     categoryId,
+    suggestedCategoryId,
     categoryConfidence,
     name,
     description,
-    revision,
-    author,
-    documentDate,
-    analyze,
+    loadCategories,
+    analyze: analyzeFile,
     submit,
     reset,
   }
