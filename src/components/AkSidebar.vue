@@ -21,7 +21,6 @@ const explorerMenuEntryList: NavEntry[] = [
   {
     to: '/docs',
     display: 'Documentos',
-    disabled: true,
   },
 ]
 </script>
