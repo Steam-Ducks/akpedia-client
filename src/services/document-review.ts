@@ -22,7 +22,10 @@ async function postJson(path: string, body: unknown, failure: string): Promise<v
 }
 
 /** Approves a `PENDING_APPROVAL` document and queues it for indexing. */
-export const approveDocument = (documentId: number, corrections: ApproveCorrections): Promise<void> =>
+export const approveDocument = (
+  documentId: number,
+  corrections: ApproveCorrections,
+): Promise<void> =>
   postJson(`/api/v1/documents/${documentId}/approve`, corrections, 'A aprovação falhou')
 
 /** Returns a `PENDING_APPROVAL` document to its author with the reason. */
