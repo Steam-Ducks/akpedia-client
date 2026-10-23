@@ -57,7 +57,7 @@ describe('review index page', () => {
     expect(wrapper.text()).toContain('87%')
   })
 
-  it('aponta a sugestão de baixa confiança e abre o documento no visualizador', async () => {
+  it('aponta a sugestão de baixa confiança e abre a tela de revisão do documento', async () => {
     const store = usePendingStore()
     store.status = 'done'
     store.pendingDocuments = [
@@ -81,7 +81,7 @@ describe('review index page', () => {
 
     await wrapper.get('.pending-card').trigger('click')
 
-    expect(push).toHaveBeenCalledWith('/docs/15')
+    expect(push).toHaveBeenCalledWith('/review/15')
   })
 })
 

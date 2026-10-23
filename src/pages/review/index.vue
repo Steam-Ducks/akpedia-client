@@ -12,7 +12,7 @@ const confidencePercent = (confidence: number | null) =>
   confidence === null ? null : Math.round(confidence * 100)
 
 const openDocument = (documentId: number) => {
-  router.push(`/docs/${documentId}`)
+  router.push(`/review/${documentId}`)
 }
 
 onMounted(() => {
