@@ -1,3 +1,5 @@
+export const formatDate = (date: Date): string => date.toLocaleDateString('pt-BR')
+
 export function formatUpdatedAgo(date: Date): string {
   const diffDays = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
 
