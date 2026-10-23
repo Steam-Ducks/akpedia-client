@@ -23,6 +23,7 @@ describe('toPendingDocument', () => {
       sectorName: 'Engenharia',
       submittedAt: new Date('2026-10-13T19:06:15.123Z'),
       suggestedCategory: 'Tecnico',
+      suggestedCategoryId: 1,
       confidence: 0.87,
       lowConfidence: false,
     })
@@ -56,6 +57,7 @@ describe('toPendingDocument', () => {
     const document = toPendingDocument(dto)
 
     expect(document.suggestedCategory).toBeNull()
+    expect(document.suggestedCategoryId).toBeNull()
     expect(document.confidence).toBeNull()
     expect(document.lowConfidence).toBe(false)
   })

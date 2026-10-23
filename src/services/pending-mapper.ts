@@ -10,6 +10,7 @@ export type PendingDocument = {
   sectorName: string
   submittedAt: Date
   suggestedCategory: string | null
+  suggestedCategoryId: number | null
   confidence: number | null
   lowConfidence: boolean
 }
@@ -21,6 +22,7 @@ export const toPendingDocument = (dto: PendingDocumentDto): PendingDocument => (
   sectorName: dto.sector_name,
   submittedAt: new Date(dto.created_at),
   suggestedCategory: dto.suggested_category?.name ?? null,
+  suggestedCategoryId: dto.suggested_category?.id ?? null,
   confidence: dto.confidence,
   lowConfidence: dto.confidence !== null && dto.confidence < LOW_CONFIDENCE_THRESHOLD,
 })
