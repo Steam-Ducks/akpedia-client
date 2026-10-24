@@ -36,4 +36,18 @@ describe('AkChip', () => {
 
     expect(wrapper.attributes('type')).toBe('button')
   })
+
+  it('defaults to the dark theme, for a colored backdrop', () => {
+    const wrapper = mount(AkChip)
+
+    expect(wrapper.classes()).toContain('dark')
+    expect(wrapper.classes()).not.toContain('light')
+  })
+
+  it('carries the light theme when asked, for a plain background', () => {
+    const wrapper = mount(AkChip, { props: { theme: 'light' } })
+
+    expect(wrapper.classes()).toContain('light')
+    expect(wrapper.classes()).not.toContain('dark')
+  })
 })

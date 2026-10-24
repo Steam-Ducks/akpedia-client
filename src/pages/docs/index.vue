@@ -64,6 +64,7 @@ onBeforeUnmount(() => {
       v-if="categories.length > 0"
       :categories="categories"
       :selected-ids="categoryIds"
+      theme="light"
       @toggle="submissionStore.toggleCategory"
     />
 
