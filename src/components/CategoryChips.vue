@@ -4,9 +4,10 @@ import type { Category } from '@/types/SearchResult'
 type Props = {
   categories: Category[]
   selectedIds: number[]
+  theme?: 'dark' | 'light'
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), { theme: 'dark' })
 
 const emit = defineEmits<{
   toggle: [id: number]
@@ -19,6 +20,7 @@ const emit = defineEmits<{
       v-for="category in categories"
       :key="category.id"
       :selected="selectedIds.includes(category.id)"
+      :theme="theme"
       @click="emit('toggle', category.id)"
     >
       {{ category.name }}

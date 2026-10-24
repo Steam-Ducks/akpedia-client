@@ -9,7 +9,8 @@ const REFRESH_INTERVAL_MS = 5000
 
 const router = useRouter()
 const submissionStore = useSubmissionStore()
-const { submissions, status, error } = storeToRefs(submissionStore)
+const { submissions, status, error, page, totalPages, categoryIds, categories } =
+  storeToRefs(submissionStore)
 
 const expandedDocumentId = ref<number | null>(null)
 
@@ -41,6 +42,7 @@ const onVisibilityChange = () => {
 
 onMounted(() => {
   submissionStore.load()
+  submissionStore.loadCategories()
   startRefreshing()
   document.addEventListener('visibilitychange', onVisibilityChange)
 })
@@ -58,6 +60,14 @@ onBeforeUnmount(() => {
       <div class="text-muted">Acompanhe o andamento dos documentos que você enviou.</div>
     </div>
 
+    <CategoryChips
+      v-if="categories.length > 0"
+      :categories="categories"
+      :selected-ids="categoryIds"
+      theme="light"
+      @toggle="submissionStore.toggleCategory"
+    />
+
     <div v-if="status === 'loading'" class="text-muted">Carregando suas submissões…</div>
     <div v-else-if="status === 'error'" class="text-muted">{{ error }}</div>
     <div v-else-if="status === 'done' && submissions.length === 0" class="text-muted">
@@ -71,12 +81,16 @@ onBeforeUnmount(() => {
         :class="{ clickable: submission.status === 'PUBLISHED' }"
         @click="submission.status === 'PUBLISHED' && openDocument(submission.documentId)"
       >
-        <div class="submission-main">
-          <div class="submission-infos">
-            <div class="text-title-small">{{ submission.name }}</div>
-            <div class="text-muted">Enviado em {{ formatDate(submission.submittedAt) }}</div>
-          </div>
+        <div class="submission-header">
+          <div class="submission-badge">{{ submission.category }}</div>
           <AkStatusChip :status="submission.status" />
+        </div>
+        <div class="text-title-small">{{ submission.name }}</div>
+        <div v-if="submission.description" class="text-muted submission-description">
+          {{ submission.description }}
+        </div>
+        <div class="text-muted submission-footer">
+          Enviado em {{ formatDate(submission.submittedAt) }}
         </div>
 
         <template v-if="submission.status === 'RETURNED' && submission.reviewComment">
@@ -93,6 +107,13 @@ onBeforeUnmount(() => {
         </template>
       </div>
     </div>
+
+    <AkPaginator
+      v-if="status === 'done'"
+      :page="page"
+      :total-pages="totalPages"
+      @change="submissionStore.goToPage"
+    />
   </main>
 </template>
 
@@ -139,18 +160,34 @@ onBeforeUnmount(() => {
   box-shadow: var(--elevation-2);
 }
 
-.submission-main {
+.submission-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-4);
 }
 
-.submission-infos {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-  min-width: 0;
+.submission-badge {
+  display: inline-block;
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--color-primary);
+  background-color: var(--color-primary-selected);
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--round-lg);
+}
+
+.submission-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.submission-footer {
+  font-size: var(--font-sm);
+  font-weight: 600;
 }
 
 .comment-toggle {
