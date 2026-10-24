@@ -1,3 +1,5 @@
+export const formatDate = (date: Date): string => date.toLocaleDateString('pt-BR')
+
 /** How long ago `date` was, as "hoje", "há N dia(s)" and so on, for a waiting-time column. */
 export const formatRelativeDays = (date: Date): string => {
   const diffDays = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
