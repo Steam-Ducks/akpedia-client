@@ -81,12 +81,16 @@ onBeforeUnmount(() => {
         :class="{ clickable: submission.status === 'PUBLISHED' }"
         @click="submission.status === 'PUBLISHED' && openDocument(submission.documentId)"
       >
-        <div class="submission-main">
-          <div class="submission-infos">
-            <div class="text-title-small">{{ submission.name }}</div>
-            <div class="text-muted">Enviado em {{ formatDate(submission.submittedAt) }}</div>
-          </div>
+        <div class="submission-header">
+          <div class="submission-badge">{{ submission.category }}</div>
           <AkStatusChip :status="submission.status" />
+        </div>
+        <div class="text-title-small">{{ submission.name }}</div>
+        <div v-if="submission.description" class="text-muted submission-description">
+          {{ submission.description }}
+        </div>
+        <div class="text-muted submission-footer">
+          Enviado em {{ formatDate(submission.submittedAt) }}
         </div>
 
         <template v-if="submission.status === 'RETURNED' && submission.reviewComment">
@@ -156,18 +160,34 @@ onBeforeUnmount(() => {
   box-shadow: var(--elevation-2);
 }
 
-.submission-main {
+.submission-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-4);
 }
 
-.submission-infos {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-  min-width: 0;
+.submission-badge {
+  display: inline-block;
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--color-primary);
+  background-color: var(--color-primary-selected);
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--round-lg);
+}
+
+.submission-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.submission-footer {
+  font-size: var(--font-sm);
+  font-weight: 600;
 }
 
 .comment-toggle {
