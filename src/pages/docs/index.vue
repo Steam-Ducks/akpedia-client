@@ -9,7 +9,8 @@ const REFRESH_INTERVAL_MS = 5000
 
 const router = useRouter()
 const submissionStore = useSubmissionStore()
-const { submissions, status, error } = storeToRefs(submissionStore)
+const { submissions, status, error, page, totalPages, categoryIds, categories } =
+  storeToRefs(submissionStore)
 
 const expandedDocumentId = ref<number | null>(null)
 
@@ -41,6 +42,7 @@ const onVisibilityChange = () => {
 
 onMounted(() => {
   submissionStore.load()
+  submissionStore.loadCategories()
   startRefreshing()
   document.addEventListener('visibilitychange', onVisibilityChange)
 })
@@ -57,6 +59,13 @@ onBeforeUnmount(() => {
       <div class="text-title-large">Minhas submissões</div>
       <div class="text-muted">Acompanhe o andamento dos documentos que você enviou.</div>
     </div>
+
+    <CategoryChips
+      v-if="categories.length > 0"
+      :categories="categories"
+      :selected-ids="categoryIds"
+      @toggle="submissionStore.toggleCategory"
+    />
 
     <div v-if="status === 'loading'" class="text-muted">Carregando suas submissões…</div>
     <div v-else-if="status === 'error'" class="text-muted">{{ error }}</div>
@@ -93,6 +102,13 @@ onBeforeUnmount(() => {
         </template>
       </div>
     </div>
+
+    <AkPaginator
+      v-if="status === 'done'"
+      :page="page"
+      :total-pages="totalPages"
+      @change="submissionStore.goToPage"
+    />
   </main>
 </template>
 
