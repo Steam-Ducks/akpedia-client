@@ -12,9 +12,11 @@ describe('pending documents service', () => {
         {
           id: 12,
           name: 'manual-vpn.pdf',
+          description: null,
           creator_name: 'Mariana Costa',
           sector_name: 'Engenharia',
           created_at: '2026-10-13T19:06:15.123Z',
+          category: { id: 1, name: 'Tecnico' },
           suggested_category: { id: 1, name: 'Tecnico' },
           confidence: 0.87,
         },

@@ -2,9 +2,11 @@
 export type PendingDocumentDto = {
   id: number
   name: string
+  description: string | null
   creator_name: string
   sector_name: string
   created_at: string
+  category: { id: number; name: string }
   suggested_category: { id: number; name: string } | null
   confidence: number | null
 }

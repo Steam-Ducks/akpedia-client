@@ -55,8 +55,8 @@ let captureTimer: ReturnType<typeof setTimeout> | undefined
 
 const fillForm = (document: PendingDocument) => {
   name.value = document.name
-  description.value = ''
-  categoryId.value = document.suggestedCategoryId
+  description.value = document.description ?? ''
+  categoryId.value = document.categoryId
 }
 
 const post = (message: ToFrame) => {
@@ -170,9 +170,16 @@ const approve = async () => {
   actionStatus.value = 'approving'
   actionError.value = null
 
-  const corrections: ApproveCorrections = { name: name.value.trim() }
-  if (description.value.trim()) corrections.description = description.value.trim()
-  if (categoryId.value !== null) corrections.categoryId = categoryId.value
+  // Only what the approver changed is sent; a blank description clears it.
+  const corrections: ApproveCorrections = {}
+  const sent = pending.value
+  if (name.value.trim() !== sent.name) corrections.name = name.value.trim()
+  if (description.value.trim() !== (sent.description ?? '')) {
+    corrections.description = description.value.trim()
+  }
+  if (categoryId.value !== null && categoryId.value !== sent.categoryId) {
+    corrections.categoryId = categoryId.value
+  }
 
   try {
     await approveDocument(pending.value.id, corrections)
@@ -267,13 +274,12 @@ onBeforeUnmount(() => {
 
         <label class="form-field">
           <span class="text-label-small">Descrição</span>
-          <AkTextarea v-model="description" placeholder="Deixe em branco para manter a atual" />
+          <AkTextarea v-model="description" placeholder="Sem descrição" />
         </label>
 
         <label class="form-field">
           <span class="text-label-small">Categoria</span>
           <AkSelect v-model="categoryId">
-            <option :value="null">Manter a categoria enviada</option>
             <option v-for="category in categories" :key="category.id" :value="category.id">
               {{ category.name }}
             </option>

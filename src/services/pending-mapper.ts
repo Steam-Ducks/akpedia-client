@@ -6,9 +6,12 @@ export const LOW_CONFIDENCE_THRESHOLD = 0.6
 export type PendingDocument = {
   id: number
   name: string
+  description: string | null
   creatorName: string
   sectorName: string
   submittedAt: Date
+  /** What the author chose, which may differ from the suggestion. */
+  categoryId: number
   suggestedCategory: string | null
   suggestedCategoryId: number | null
   confidence: number | null
@@ -18,9 +21,11 @@ export type PendingDocument = {
 export const toPendingDocument = (dto: PendingDocumentDto): PendingDocument => ({
   id: dto.id,
   name: dto.name,
+  description: dto.description,
   creatorName: dto.creator_name,
   sectorName: dto.sector_name,
   submittedAt: new Date(dto.created_at),
+  categoryId: dto.category.id,
   suggestedCategory: dto.suggested_category?.name ?? null,
   suggestedCategoryId: dto.suggested_category?.id ?? null,
   confidence: dto.confidence,
