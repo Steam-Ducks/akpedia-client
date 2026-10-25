@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useSubmissionStore } from '../submission-store'
 import type { SubmissionPage } from '@/types/Submission'
 
-const page = (): SubmissionPage => ({
+const page = (overrides: Partial<SubmissionPage> = {}): SubmissionPage => ({
   content: [
     {
       document_id: 5,
@@ -16,9 +16,10 @@ const page = (): SubmissionPage => ({
     },
   ],
   page: 0,
-  size: 50,
+  size: 10,
   total_elements: 1,
   total_pages: 1,
+  ...overrides,
 })
 
 describe('submission store', () => {
@@ -61,5 +62,78 @@ describe('submission store', () => {
     const second = store.load()
     expect(store.status).toBe('done')
     await second
+  })
+
+  it('keeps the total pages from the response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => page({ total_pages: 3 }) }),
+    )
+
+    const store = useSubmissionStore()
+    await store.load()
+
+    expect(store.totalPages).toBe(3)
+  })
+
+  it('goToPage loads the requested page and keeps the current filter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => page() })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useSubmissionStore()
+    store.categoryIds = [2]
+    store.goToPage(1)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    const url = new URL(fetchMock.mock.calls[0][0], 'http://localhost')
+    expect(url.searchParams.get('page')).toBe('1')
+    expect(url.searchParams.getAll('categoryIds')).toEqual(['2'])
+    expect(store.page).toBe(1)
+  })
+
+  it('toggling a category goes back to the first page', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => page() })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useSubmissionStore()
+    store.page = 2
+
+    store.toggleCategory(1)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    expect(store.categoryIds).toEqual([1])
+    expect(store.page).toBe(0)
+    const url = new URL(fetchMock.mock.calls[0][0], 'http://localhost')
+    expect(url.searchParams.get('page')).toBe('0')
+    expect(url.searchParams.getAll('categoryIds')).toEqual(['1'])
+  })
+
+  it('toggling a selected category removes it from the filter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => page() })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useSubmissionStore()
+    store.toggleCategory(1)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    store.toggleCategory(1)
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+
+    expect(store.categoryIds).toEqual([])
+  })
+
+  it('loads the category catalog', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ id: 1, name: 'Engenharia', description: null }],
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = useSubmissionStore()
+    await store.loadCategories()
+
+    const url = new URL(fetchMock.mock.calls[0][0], 'http://localhost')
+    expect(url.pathname).toBe('/api/v1/categories')
+    expect(store.categories).toHaveLength(1)
   })
 })

@@ -19,6 +19,7 @@ describe('toSubmission', () => {
     expect(submission).toEqual({
       documentId: 5,
       name: 'manual.pdf',
+      description: 'manual técnico',
       category: 'Manuais',
       status: 'PUBLISHED',
       submittedAt: new Date('2026-10-15T09:00:00Z'),
@@ -43,5 +44,6 @@ describe('toSubmission', () => {
 
     expect(submission.status).toBe('RETURNED')
     expect(submission.reviewComment).toBe('Falta a seção de revisão A.')
+    expect(submission.description).toBeNull()
   })
 })

@@ -28,4 +28,22 @@ describe('CategoryChips', () => {
 
     expect(wrapper.emitted('toggle')).toEqual([[2]])
   })
+
+  it('defaults every chip to the dark theme', () => {
+    const wrapper = mount(CategoryChips, {
+      props: { categories, selectedIds: [] },
+    })
+
+    const chips = wrapper.findAll('.ak-chip')
+    expect(chips.every((chip) => chip.classes().includes('dark'))).toBe(true)
+  })
+
+  it('passes the light theme down to every chip', () => {
+    const wrapper = mount(CategoryChips, {
+      props: { categories, selectedIds: [], theme: 'light' },
+    })
+
+    const chips = wrapper.findAll('.ak-chip')
+    expect(chips.every((chip) => chip.classes().includes('light'))).toBe(true)
+  })
 })
