@@ -11,10 +11,19 @@ type Props = {
 defineProps<Props>()
 
 const resultStore = useResultStore()
-const { query, status } = storeToRefs(resultStore)
+const { query, categoryIds, categories, status } = storeToRefs(resultStore)
+
+onMounted(() => {
+  if (categories.value.length === 0) {
+    resultStore.loadCategories()
+  }
+})
+
+const canSubmit = computed(() => query.value.trim() !== '' || categoryIds.value.length > 0)
 
 function submit() {
-  resultStore.search(query.value)
+  if (!canSubmit.value) return
+  resultStore.search(query.value, categoryIds.value)
 }
 </script>
 
@@ -35,13 +44,26 @@ function submit() {
       <AkButton
         type="submit"
         :icon="compact"
-        :disabled="status === 'loading' || !query.trim()"
+        :disabled="status === 'loading' || !canSubmit"
         :title="compact ? 'Buscar documentos' : undefined"
       >
         <template v-if="!compact">Buscar documentos</template>
         <ArrowUpRight :size="19" />
       </AkButton>
     </div>
+    <AkAccordion v-if="compact && categories.length > 0" title="Categorias">
+      <CategoryChips
+        :categories="categories"
+        :selected-ids="categoryIds"
+        @toggle="resultStore.toggleCategory"
+      />
+    </AkAccordion>
+    <CategoryChips
+      v-else-if="categories.length > 0"
+      :categories="categories"
+      :selected-ids="categoryIds"
+      @toggle="resultStore.toggleCategory"
+    />
   </form>
 </template>
 
@@ -89,7 +111,6 @@ function submit() {
   display: flex;
   gap: var(--spacing-5);
 }
-
 .searchbox-wrapper.compact {
   padding: var(--spacing-2);
 }
@@ -104,5 +125,10 @@ function submit() {
   padding: var(--spacing-2) var(--spacing-3);
   gap: var(--spacing-2);
   font-size: var(--font-md);
+}
+.compact :deep(.ak-accordion-header),
+.compact :deep(.ak-accordion-content) {
+  padding-left: var(--spacing-3);
+  padding-right: var(--spacing-3);
 }
 </style>

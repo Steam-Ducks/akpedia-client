@@ -8,7 +8,7 @@ const resultStore = useResultStore()
 const { result: payload } = storeToRefs(resultStore)
 
 const computedAccuracy = computed(() =>
-  payload.value?.accuracy === undefined ? null : Math.round(payload.value.accuracy * 100),
+  payload.value?.accuracy == null ? null : Math.round(payload.value.accuracy * 100),
 )
 
 function openDocument() {

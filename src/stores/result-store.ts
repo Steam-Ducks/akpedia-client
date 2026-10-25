@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { ResultPayload } from '@/types/DocData'
-import { fetchRecentDocuments, searchDocuments } from '@/services/search'
+import type { Category } from '@/types/SearchResult'
+import { fetchCategories, fetchRecentDocuments, searchDocuments } from '@/services/search'
 import { toResultPayload } from '@/services/search-mapper'
 
 type SearchStatus = 'idle' | 'loading' | 'done' | 'error'
@@ -9,6 +10,10 @@ type SearchStatus = 'idle' | 'loading' | 'done' | 'error'
 export const useResultStore = defineStore('result', () => {
   /** Kept here so the searched text survives moving between pages. */
   const query = ref('')
+  /** Categories the search is narrowed to; empty means every category. */
+  const categoryIds = ref<number[]>([])
+  /** The whole category catalog, to populate the filter. */
+  const categories = ref<Category[]>([])
   const results = ref<ResultPayload[]>([])
   /** Documents shown before anything is searched. */
   const recent = ref<ResultPayload[]>([])
@@ -19,9 +24,9 @@ export const useResultStore = defineStore('result', () => {
   /** Guards against an older, slower request overwriting the results of a newer one. */
   let latestRequest = 0
 
-  async function search(query: string) {
+  async function search(query: string, ids: number[] = []) {
     const trimmed = query.trim()
-    if (!trimmed) {
+    if (!trimmed && ids.length === 0) {
       return
     }
 
@@ -31,7 +36,7 @@ export const useResultStore = defineStore('result', () => {
     result.value = null
 
     try {
-      const found = await searchDocuments(trimmed)
+      const found = await searchDocuments(trimmed, ids)
       if (request !== latestRequest) return
       results.value = found.map(toResultPayload)
       status.value = 'done'
@@ -52,9 +57,40 @@ export const useResultStore = defineStore('result', () => {
     }
   }
 
+  async function loadCategories() {
+    try {
+      categories.value = await fetchCategories()
+    } catch {
+      // The filter is only a convenience; the page still works with search by text alone.
+      categories.value = []
+    }
+  }
+
+  /** Adds or removes a category from the filter, then searches with the updated selection. */
+  function toggleCategory(id: number) {
+    categoryIds.value = categoryIds.value.includes(id)
+      ? categoryIds.value.filter((existing) => existing !== id)
+      : [...categoryIds.value, id]
+    search(query.value, categoryIds.value)
+  }
+
   function setResult(newResult: ResultPayload) {
     result.value = newResult
   }
 
-  return { query, results, recent, result, status, error, search, loadRecent, setResult }
+  return {
+    query,
+    categoryIds,
+    categories,
+    results,
+    recent,
+    result,
+    status,
+    error,
+    search,
+    loadRecent,
+    loadCategories,
+    toggleCategory,
+    setResult,
+  }
 })

@@ -20,25 +20,24 @@ const documentData = computed(() => props.payload.documentData)
 const updatedAgo = computed(() => formatUpdatedAgo(documentData.value.lastUpdate))
 const isSelected = computed(() => selectedResult.value?.documentData.id === documentData.value.id)
 
-function selectResult() {
+const openDocument = () => {
   resultStore.setResult(props.payload)
-}
-
-function openDocument() {
   const q = query.value.trim()
   router.push({ path: `/docs/${documentData.value.id}`, query: q ? { q } : {} })
 }
 </script>
 
 <template>
-  <div class="result-card" :class="{ selected: isSelected }" @click="selectResult">
+  <div class="result-card" :class="{ selected: isSelected }" @click="openDocument">
     <div class="result-header">
       <div class="result-infos">
         <div class="result-badge">
           {{ documentData.category }}
         </div>
       </div>
-      <AkButton icon @click.stop="openDocument"> <ArrowUpRight :size="19" /> </AkButton>
+      <AkButton class="open-button" icon @click.stop="openDocument">
+        <ArrowUpRight :size="19" />
+      </AkButton>
     </div>
     <div class="text-title-small">{{ documentData.title }}</div>
     <div class="text-muted result-description">{{ documentData.shortDescription }}</div>
@@ -87,6 +86,15 @@ function openDocument() {
 .result-header {
   display: flex;
   justify-content: space-between;
+}
+
+.result-card .open-button {
+  background-color: transparent;
+  color: var(--color-primary);
+}
+
+.result-card .open-button:hover {
+  background-color: var(--color-primary-selected);
 }
 
 .result-badge {

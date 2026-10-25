@@ -21,7 +21,14 @@ const explorerMenuEntryList: NavEntry[] = [
   {
     to: '/docs',
     display: 'Documentos',
-    disabled: true,
+  },
+  {
+    to: '/upload',
+    display: 'Enviar documento',
+  },
+  {
+    to: '/review',
+    display: 'Pendentes',
   },
 ]
 </script>
