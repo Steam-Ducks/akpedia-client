@@ -5,13 +5,14 @@
         <img :src="logoUrl" alt="Akpedia" class="logo" />
       </RouterLink>
     </div>
-    <AkSidebarNav title="Explorar" :entry-list="explorerMenuEntryList" />
+    <AkSidebarNav title="Explorar" :entry-list="entryList" />
   </aside>
 </template>
 
 <script setup lang="ts">
 import { NavEntry } from './AkSidebarNav.vue'
 import logoUrl from '@/assets/images/akpedia-logo.png'
+import { sessionUser } from '@/services/auth'
 
 const explorerMenuEntryList: NavEntry[] = [
   {
@@ -26,11 +27,14 @@ const explorerMenuEntryList: NavEntry[] = [
     to: '/upload',
     display: 'Enviar documento',
   },
-  {
-    to: '/review',
-    display: 'Pendentes',
-  },
 ]
+
+const reviewEntry: NavEntry = { to: '/review', display: 'Pendentes' }
+
+/** "Pendentes" only for those who may review. */
+const entryList = computed(() =>
+  sessionUser.value?.canReview ? [...explorerMenuEntryList, reviewEntry] : explorerMenuEntryList,
+)
 </script>
 
 <style lang="css" scoped>
