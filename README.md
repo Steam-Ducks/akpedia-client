@@ -56,6 +56,8 @@ akpedia-client/
     ├── main.ts # bootstrap da aplicação Vue
     ├── App.vue # componente raiz
     ├── config/api.ts # base URL do akpedia-server (VITE_API_BASE_URL)
+    ├── services/auth.ts # login no Keycloak e dados do usuário logado
+    ├── services/api.ts # fetch para a API com o token do usuário
     └── components/
         ├── HealthStatus.vue # verifica a conexão com o backend
         └── __tests__/ # testes (Vitest)
@@ -67,11 +69,31 @@ akpedia-client/
 
 A aplicação lê a URL do backend a partir de variável de ambiente (com default para dev):
 
-| Variável            | Default                 | Descrição                           |
-| ------------------- | ----------------------- | ----------------------------------- |
-| `VITE_API_BASE_URL` | `http://localhost:8080` | URL base da API do `akpedia-server` |
+| Variável                  | Default                 | Descrição                           |
+| ------------------------- | ----------------------- | ----------------------------------- |
+| `VITE_API_BASE_URL`       | `http://localhost:8080` | URL base da API do `akpedia-server` |
+| `VITE_KEYCLOAK_URL`       | `http://localhost:8180` | Keycloak onde o usuário faz login   |
+| `VITE_KEYCLOAK_REALM`     | `akpedia`               | Realm do Keycloak                   |
+| `VITE_KEYCLOAK_CLIENT_ID` | `akpedia-client`        | Client público do realm             |
 
 > Variáveis `VITE_*` são resolvidas em **tempo de build**, ao usar Docker, ela é passada como build arg no `docker-compose.yml`.
+
+---
+
+## Login
+
+A aplicação só abre com o usuário logado. Ao entrar, o navegador vai para a tela de login do
+Keycloak (client `akpedia-client`, com PKCE) e volta logado; o Keycloak e os usuários de teste
+estão no README do `akpedia-server`.
+
+- Toda chamada à API leva o token do usuário (`src/services/api.ts`), renovado antes de expirar.
+  Se o servidor recusar o token (401), o navegador volta para o login.
+- O nome, o e-mail e o setor aparecem no menu do avatar, no cabeçalho, com o botão **Sair**,
+  que encerra a sessão também no Keycloak.
+- **Pendentes** só aparece para quem tem o papel `APPROVER` ou `ADMIN`; os outros, ao abrir
+  `/review`, voltam para a página inicial. O servidor recusa essas rotas de qualquer forma.
+- O login exige um contexto seguro (`localhost` ou HTTPS): fora dele o navegador não oferece
+  o Web Crypto que o PKCE usa.
 
 ---
 
