@@ -92,6 +92,13 @@ estão no README do `akpedia-server`.
   que encerra a sessão também no Keycloak.
 - **Pendentes** só aparece para quem tem o papel `APPROVER` ou `ADMIN`; os outros, ao abrir
   `/review`, voltam para a página inicial. O servidor recusa essas rotas de qualquer forma.
+- **Termos de uso**: depois do login, quem ainda não aceitou a versão atual vê os termos antes de
+  qualquer tela. **Aceitar** libera o app; **Recusar e sair** encerra a sessão. Enquanto não houver
+  aceite, o servidor recusa as outras chamadas (403 `terms_not_accepted`), e se uma versão nova
+  for publicada com o usuário no app, a tela de termos volta. Os administradores (`ADMIN`)
+  publicam as versões em **Administração › Termos de uso** (`/admin/terms`), partindo do texto
+  da versão atual; cada publicação vira uma nova versão que todos, o admin incluído, precisam
+  aceitar. Enquanto nenhuma versão for publicada, ninguém precisa aceitar nada.
 - O login exige um contexto seguro (`localhost` ou HTTPS): fora dele o navegador não oferece
   o Web Crypto que o PKCE usa.
 

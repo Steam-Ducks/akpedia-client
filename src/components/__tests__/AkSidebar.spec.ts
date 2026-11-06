@@ -21,11 +21,12 @@ const RouterLinkStub = { props: ['to'], template: '<a><slot /></a>' }
 
 const mountSidebar = () => mount(AkSidebar, { global: { stubs: { RouterLink: RouterLinkStub } } })
 
-const asUser = (canReview: boolean): SessionUser => ({
+const asUser = (canReview: boolean, isAdmin = false): SessionUser => ({
   name: 'Ana Souza',
   email: 'ana@akpedia.local',
   sector: 'Setor 1',
   canReview,
+  isAdmin,
 })
 
 describe('AkSidebar', () => {
@@ -43,5 +44,19 @@ describe('AkSidebar', () => {
     const text = mountSidebar().text()
     expect(text).toContain('Enviar documento')
     expect(text).not.toContain('Pendentes')
+  })
+
+  it('shows the Administração section to an admin', () => {
+    user.value = asUser(true, true)
+    const text = mountSidebar().text()
+    expect(text).toContain('Administração')
+    expect(text).toContain('Termos de uso')
+  })
+
+  it('hides the Administração section from everyone else', () => {
+    user.value = asUser(true)
+    const text = mountSidebar().text()
+    expect(text).not.toContain('Administração')
+    expect(text).not.toContain('Termos de uso')
   })
 })

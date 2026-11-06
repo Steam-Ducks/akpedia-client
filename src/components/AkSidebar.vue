@@ -6,6 +6,12 @@
       </RouterLink>
     </div>
     <AkSidebarNav title="Explorar" :entry-list="entryList" />
+    <AkSidebarNav
+      v-if="sessionUser?.isAdmin"
+      class="sidebar-section"
+      title="Administração"
+      :entry-list="adminEntryList"
+    />
   </aside>
 </template>
 
@@ -35,6 +41,8 @@ const reviewEntry: NavEntry = { to: '/review', display: 'Pendentes' }
 const entryList = computed(() =>
   sessionUser.value?.canReview ? [...explorerMenuEntryList, reviewEntry] : explorerMenuEntryList,
 )
+
+const adminEntryList: NavEntry[] = [{ to: '/admin/terms', display: 'Termos de uso' }]
 </script>
 
 <style lang="css" scoped>
@@ -49,6 +57,9 @@ const entryList = computed(() =>
   padding: var(--spacing-8);
   border-bottom: 1px solid var(--color-border);
   margin-bottom: var(--spacing-4);
+}
+.sidebar-section {
+  margin-top: var(--spacing-6);
 }
 .logo {
   display: block;
