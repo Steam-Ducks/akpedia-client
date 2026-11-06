@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { apiFetch } from '../api'
+import { apiFetch, onTermsNotAccepted } from '../api'
 import { accessToken, loginAgain } from '../auth'
 
 vi.mock('../auth', () => ({
@@ -11,6 +11,7 @@ describe('apiFetch', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.clearAllMocks()
+    onTermsNotAccepted(null)
   })
 
   it('sends the access token, keeping the other headers', async () => {
@@ -54,5 +55,39 @@ describe('apiFetch', () => {
     await apiFetch('/api/v1/documents/pending')
 
     expect(loginAgain).not.toHaveBeenCalled()
+  })
+
+  const forbidden = (body: unknown) => {
+    const response = {
+      ok: false,
+      status: 403,
+      json: async () => body,
+      clone: () => ({ json: async () => body }),
+    }
+    return response
+  }
+
+  it('reports terms not accepted, leaving the body readable to the caller', async () => {
+    vi.mocked(accessToken).mockResolvedValue('abc')
+    const body = { code: 'terms_not_accepted', message: 'Aceite os termos de uso.' }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(forbidden(body)))
+    const callback = vi.fn()
+    onTermsNotAccepted(callback)
+
+    const response = await apiFetch('/api/v1/documents')
+
+    expect(callback).toHaveBeenCalledOnce()
+    expect(await response.json()).toEqual(body)
+  })
+
+  it('does not report terms on any other 403', async () => {
+    vi.mocked(accessToken).mockResolvedValue('abc')
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(forbidden({ code: 'forbidden' })))
+    const callback = vi.fn()
+    onTermsNotAccepted(callback)
+
+    await apiFetch('/api/v1/documents/pending')
+
+    expect(callback).not.toHaveBeenCalled()
   })
 })

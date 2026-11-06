@@ -12,6 +12,8 @@ export type SessionUser = {
   email: string
   sector: string | null
   canReview: boolean
+  /** Publishes the terms of use. */
+  isAdmin: boolean
 }
 
 type AkpediaToken = {
@@ -43,6 +45,7 @@ function readUser(): SessionUser | null {
     email: token.email ?? '',
     sector: token.sector ?? null,
     canReview: roles.some((role) => REVIEWER_ROLES.includes(role)),
+    isAdmin: roles.includes('ADMIN'),
   }
 }
 
