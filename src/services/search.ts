@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/config/api'
+import { apiFetch } from '@/services/api'
 import type { ApiError, Category, DocumentSummary, SearchResult } from '@/types/SearchResult'
 
 /** Largest limit the server accepts (`akpedia.search.max-limit`), so every match comes back. */
@@ -8,7 +8,7 @@ const SEARCH_LIMIT = 50
 const RECENT_LIMIT = 5
 
 async function getJson<T>(path: string, params: URLSearchParams, failure: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}?${params}`)
+  const response = await apiFetch(`${path}?${params}`)
 
   if (!response.ok) {
     const error = (await response.json().catch(() => null)) as ApiError | null

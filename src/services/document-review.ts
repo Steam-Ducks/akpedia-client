@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/config/api'
+import { apiFetch } from '@/services/api'
 import type { ApiError } from '@/types/SearchResult'
 
 /** Corrections the approver makes while approving; a field left out keeps what the author sent. */
@@ -9,7 +9,7 @@ export type ApproveCorrections = {
 }
 
 async function postJson(path: string, body: unknown, failure: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await apiFetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
