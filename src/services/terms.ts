@@ -12,6 +12,16 @@ import type {
 /** Raised when accepting a version that is no longer the current one (409 `terms_changed`). */
 export class TermsChangedError extends Error {}
 
+/** Raised when publishing a version that was published before, in any case (409 `terms_version_exists`). */
+export class TermsVersionExistsError extends Error {}
+
+/** A version the server takes: trimmed, 1–20 letters, digits, `.`, `-` or `_`. */
+export const TERMS_VERSION_PATTERN = /^[A-Za-z0-9._-]{1,20}$/
+
+/** Versions are told apart ignoring case and the spaces around them, as the server does. */
+export const sameTermsVersion = (a: string, b: string) =>
+  a.trim().toLowerCase() === b.trim().toLowerCase()
+
 export const toTermsVersion = (dto: TermsVersionDto): TermsVersion => ({
   version: dto.version,
   title: dto.title,
@@ -32,6 +42,9 @@ async function send<T>(path: string, init: RequestInit, failure: string): Promis
     const error = (await response.json().catch(() => null)) as ApiError | null
     if (response.status === 409 && error?.code === 'terms_changed') {
       throw new TermsChangedError(error.message)
+    }
+    if (response.status === 409 && error?.code === 'terms_version_exists') {
+      throw new TermsVersionExistsError(error.message)
     }
     throw new Error(error?.message ?? `${failure} (HTTP ${response.status}).`)
   }
@@ -62,7 +75,7 @@ export async function fetchTerms(): Promise<{
 }
 
 /** Accepts `version`, which must still be the current one. */
-export async function acceptTerms(version: number): Promise<TermsAcceptance> {
+export async function acceptTerms(version: string): Promise<TermsAcceptance> {
   const accepted = await send<TermsAcceptanceDto>(
     '/api/v1/terms/accept',
     postJson({ version }),
@@ -71,7 +84,7 @@ export async function acceptTerms(version: number): Promise<TermsAcceptance> {
   return toTermsAcceptance(accepted)
 }
 
-/** Every published version, newest first. Admins only. */
+/** Every published version, newest first (by publication: the first is the current one). Admins only. */
 export async function fetchTermsVersions(): Promise<TermsVersion[]> {
   const versions = await send<TermsVersionDto[]>(
     '/api/v1/admin/terms',
@@ -81,7 +94,10 @@ export async function fetchTermsVersions(): Promise<TermsVersion[]> {
   return versions.map(toTermsVersion)
 }
 
-/** Publishes a new version; every user, the admin included, has to accept it. Admins only. */
+/**
+ * Publishes a new version, named `draft.version`; every user, the admin included, has to accept it.
+ * Throws {@link TermsVersionExistsError} when that version was published before. Admins only.
+ */
 export async function publishTerms(draft: TermsDraft): Promise<TermsVersion> {
   const published = await send<TermsVersionDto>(
     '/api/v1/admin/terms',

@@ -13,7 +13,7 @@ vi.mock('@/services/terms', () => ({
   TermsChangedError: class extends Error {},
 }))
 
-const version = (number: number): TermsVersion => ({
+const version = (number: string): TermsVersion => ({
   version: number,
   title: 'Termos de uso',
   content: 'Primeiro parágrafo.\n\nSegundo parágrafo <b>sem HTML</b>.',
@@ -28,7 +28,7 @@ describe('AkTermsScreen', () => {
   })
 
   it('shows the current version as plain text', () => {
-    useTermsStore().current = version(3)
+    useTermsStore().current = version('3')
 
     const wrapper = mount(AkTermsScreen)
 
@@ -42,15 +42,15 @@ describe('AkTermsScreen', () => {
 
   it('says the terms changed when an older version was accepted', () => {
     const store = useTermsStore()
-    store.current = version(3)
-    store.accepted = { version: 2, acceptedAt: new Date() }
+    store.current = version('3')
+    store.accepted = { version: '2', acceptedAt: new Date() }
 
     expect(mount(AkTermsScreen).text()).toContain('Você aceitou a versão 2; os termos mudaram.')
   })
 
   it('accepts the terms', async () => {
     const store = useTermsStore()
-    store.current = version(3)
+    store.current = version('3')
     const accept = vi.spyOn(store, 'accept').mockResolvedValue()
 
     await mount(AkTermsScreen).get('.terms-accept').trigger('click')
@@ -59,7 +59,7 @@ describe('AkTermsScreen', () => {
   })
 
   it('logs out when the terms are declined', async () => {
-    useTermsStore().current = version(3)
+    useTermsStore().current = version('3')
 
     await mount(AkTermsScreen).get('.terms-decline').trigger('click')
 
