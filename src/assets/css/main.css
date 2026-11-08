@@ -44,9 +44,13 @@ body,
   margin: 0;
 }
 
-#app {
+/* On body, not #app, so what is mounted outside #app (SweetAlert dialogs) gets them too. */
+body {
   color: var(--color-text);
   font-family: 'Manrope', system-ui, sans-serif;
+}
+
+#app {
   background-color: var(--color-background);
   display: flex;
   flex-direction: column;
