@@ -84,6 +84,20 @@ export async function acceptTerms(version: string): Promise<TermsAcceptance> {
   return toTermsAcceptance(accepted)
 }
 
+/**
+ * Records that the user declined `version`, right before their account is deleted. A 204 with no
+ * body.
+ */
+export async function declineTerms(version: string): Promise<void> {
+  const response = await apiFetch('/api/v1/terms/decline', postJson({ version }))
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as ApiError | null
+    throw new Error(
+      error?.message ?? `Não foi possível registrar a recusa dos termos (HTTP ${response.status}).`,
+    )
+  }
+}
+
 /** Every published version, newest first (by publication: the first is the current one). Admins only. */
 export async function fetchTermsVersions(): Promise<TermsVersion[]> {
   const versions = await send<TermsVersionDto[]>(

@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useTermsStore } from '../terms-store'
-import { acceptTerms, fetchTerms, TermsChangedError } from '@/services/terms'
+import { acceptTerms, declineTerms, fetchTerms, TermsChangedError } from '@/services/terms'
 import type { TermsVersion } from '@/types/Terms'
 
 vi.mock('@/services/terms', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/services/terms')>()),
   fetchTerms: vi.fn(),
   acceptTerms: vi.fn(),
+  declineTerms: vi.fn(),
 }))
 
 const version = (number: string): TermsVersion => ({
@@ -108,5 +109,24 @@ describe('terms store', () => {
 
     expect(store.status).toBe('error')
     expect(store.error).toBe('Sem conexão.')
+  })
+
+  it('records the refusal of the version on screen', async () => {
+    vi.mocked(fetchTerms).mockResolvedValue({ current: version('4.0'), accepted: null })
+    const store = useTermsStore()
+    await store.load()
+
+    await store.decline()
+
+    expect(declineTerms).toHaveBeenCalledWith('4.0')
+  })
+
+  it('fails when the refusal cannot be recorded', async () => {
+    vi.mocked(fetchTerms).mockResolvedValue({ current: version('4.0'), accepted: null })
+    vi.mocked(declineTerms).mockRejectedValue(new Error('Sem conexão.'))
+    const store = useTermsStore()
+    await store.load()
+
+    await expect(store.decline()).rejects.toThrow('Sem conexão.')
   })
 })

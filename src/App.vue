@@ -8,7 +8,7 @@ const { status, pending, error } = storeToRefs(termsStore)
 
 onMounted(() => {
   // New terms published while the user is in the app: the server starts refusing every call,
-  // and the terms screen comes back.
+  // and the terms dialog comes back.
   onTermsNotAccepted(() => termsStore.load())
   termsStore.load()
 })
@@ -17,17 +17,27 @@ onBeforeUnmount(() => onTermsNotAccepted(null))
 </script>
 
 <template>
-  <!-- The app opens only once the current terms of use are accepted. -->
-  <AkTermsScreen v-if="pending" />
-  <div v-else-if="status === 'done'" class="akpedia-page">
-    <AkSidebar />
-    <div class="main-section">
-      <AkHeader />
-      <div class="main-content">
-        <RouterView />
+  <!--
+    Nothing opens before the terms status is known. While the current terms still have to be
+    accepted, the layout stays behind the dialog, dimmed and inert, without the page itself: a page
+    would load its data, get 403 terms_not_accepted and bring the dialog up again.
+  -->
+  <template v-if="status === 'done'">
+    <div
+      class="akpedia-page"
+      :inert="pending || undefined"
+      :aria-hidden="pending ? 'true' : undefined"
+    >
+      <AkSidebar />
+      <div class="main-section">
+        <AkHeader />
+        <div class="main-content">
+          <RouterView v-if="!pending" />
+        </div>
       </div>
     </div>
-  </div>
+    <AkTermsModal v-if="pending" />
+  </template>
   <div v-else-if="status === 'error'" class="app-message">
     <span class="text-muted">{{ error }}</span>
     <AkButton type="button" @click="termsStore.load()">Tentar novamente</AkButton>

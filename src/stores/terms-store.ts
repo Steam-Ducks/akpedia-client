@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { acceptTerms, fetchTerms, TermsChangedError } from '@/services/terms'
+import { acceptTerms, declineTerms, fetchTerms, TermsChangedError } from '@/services/terms'
 import type { TermsAcceptance, TermsVersion } from '@/types/Terms'
 
 type TermsStatus = 'idle' | 'loading' | 'done' | 'error'
@@ -58,5 +58,15 @@ export const useTermsStore = defineStore('terms', () => {
     }
   }
 
-  return { current, accepted, status, accepting, error, pending, load, accept }
+  /**
+   * Records that the user declined the version on screen, before their account is deleted:
+   * declining means leaving the Akpedia for good. Throws when it cannot be recorded, so nothing is
+   * deleted without the record.
+   */
+  const decline = async () => {
+    if (!current.value) return
+    await declineTerms(current.value.version)
+  }
+
+  return { current, accepted, status, accepting, error, pending, load, accept, decline }
 })

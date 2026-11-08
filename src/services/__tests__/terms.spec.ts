@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   acceptTerms,
+  declineTerms,
   fetchTerms,
   publishTerms,
   sameTermsVersion,
@@ -128,5 +129,39 @@ describe('terms service', () => {
     }
     expect(sameTermsVersion(' V1.0 ', 'v1.0')).toBe(true)
     expect(sameTermsVersion('1.0', '1.0.1')).toBe(false)
+  })
+
+  it('declines the version that was shown', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await declineTerms('3.0')
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toContain('/api/v1/terms/decline')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual({ version: '3.0' })
+  })
+
+  it('reports a failed refusal', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => null }),
+    )
+
+    await expect(declineTerms('3.0')).rejects.toThrow('HTTP 500')
+  })
+
+  it('shows the server’s message for a refused refusal', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: async () => ({ code: 'terms_changed', message: 'Os termos mudaram.' }),
+      }),
+    )
+
+    await expect(declineTerms('3.0')).rejects.toThrow('Os termos mudaram.')
   })
 })
