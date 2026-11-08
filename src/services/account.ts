@@ -1,0 +1,27 @@
+import { apiFetch } from '@/services/api'
+import type { ApiError } from '@/types/SearchResult'
+
+/** What the user sees for the errors `DELETE /api/v1/me` answers with a code. */
+const MESSAGE_BY_CODE: Record<string, string> = {
+  last_admin:
+    'Você é o único administrador ativo. Torne outra pessoa administradora antes de excluir a sua conta.',
+  keycloak_unavailable:
+    'Não foi possível falar com o Keycloak agora. Tente novamente em alguns instantes.',
+}
+
+/**
+ * Deletes the logged-in user's account for good: the Keycloak login goes and the personal data is
+ * removed (only an admin can register them again). A 204 with no body. The caller logs out
+ * afterwards.
+ */
+export async function deleteMyAccount(): Promise<void> {
+  const response = await apiFetch('/api/v1/me', { method: 'DELETE' })
+  if (response.ok) return
+
+  const error = (await response.json().catch(() => null)) as ApiError | null
+  throw new Error(
+    (error?.code && MESSAGE_BY_CODE[error.code]) ||
+      error?.message ||
+      `Não foi possível excluir a sua conta (HTTP ${response.status}).`,
+  )
+}
