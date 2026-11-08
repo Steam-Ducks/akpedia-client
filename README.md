@@ -72,7 +72,7 @@ A aplicação lê a URL do backend a partir de variável de ambiente (com defaul
 | Variável                  | Default                 | Descrição                           |
 | ------------------------- | ----------------------- | ----------------------------------- |
 | `VITE_API_BASE_URL`       | `http://localhost:8080` | URL base da API do `akpedia-server` |
-| `VITE_KEYCLOAK_URL`       | `http://localhost:8180` | Keycloak onde o usuário faz login   |
+| `VITE_KEYCLOAK_URL`       | `<origem do app>/auth`  | Keycloak onde o usuário faz login   |
 | `VITE_KEYCLOAK_REALM`     | `akpedia`               | Realm do Keycloak                   |
 | `VITE_KEYCLOAK_CLIENT_ID` | `akpedia-client`        | Client público do realm             |
 

@@ -25,7 +25,8 @@ type AkpediaToken = {
 }
 
 const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180',
+  // Keycloak sits behind the same nginx as the app, under /auth.
+  url: import.meta.env.VITE_KEYCLOAK_URL || `${window.location.origin}/auth`,
   realm: import.meta.env.VITE_KEYCLOAK_REALM || 'akpedia',
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'akpedia-client',
 })
