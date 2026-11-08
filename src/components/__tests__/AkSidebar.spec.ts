@@ -51,7 +51,9 @@ describe('AkSidebar', () => {
     user.value = asUser(true, true)
     const text = mountSidebar().text()
     expect(text).toContain('Administração')
+    expect(text).toContain('Usuários')
     expect(text).toContain('Termos de uso')
+    expect(text).not.toContain('Permissões opcionais')
   })
 
   it('leaves "Minha conta" to the user menu in the header', () => {
@@ -62,10 +64,20 @@ describe('AkSidebar', () => {
     expect(targets).not.toContain('/conta')
   })
 
+  it('links the admin pages', () => {
+    user.value = asUser(true, true)
+    const targets = mountSidebar()
+      .findAllComponents(RouterLinkStub)
+      .map((link) => link.props('to'))
+    expect(targets).toEqual(expect.arrayContaining(['/admin/users', '/admin/terms']))
+    expect(targets).not.toContain('/admin/optional-permissions')
+  })
+
   it('hides the Administração section from everyone else', () => {
     user.value = asUser(true)
     const text = mountSidebar().text()
     expect(text).not.toContain('Administração')
+    expect(text).not.toContain('Usuários')
     expect(text).not.toContain('Termos de uso')
   })
 })

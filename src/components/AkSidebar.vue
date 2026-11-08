@@ -16,7 +16,14 @@
 </template>
 
 <script setup lang="ts">
-import { ClipboardCheck, FileSignature, FileText, LayoutDashboard, Upload } from '@lucide/vue'
+import {
+  ClipboardCheck,
+  FileSignature,
+  FileText,
+  LayoutDashboard,
+  Upload,
+  Users,
+} from '@lucide/vue'
 import { NavEntry } from './AkSidebarNav.vue'
 import logoUrl from '@/assets/images/akpedia-logo.png'
 import { sessionUser } from '@/services/auth'
@@ -47,6 +54,7 @@ const entryList = computed(() =>
 )
 
 const adminEntryList: NavEntry[] = [
+  { to: '/admin/users', display: 'Usuários', icon: Users },
   { to: '/admin/terms', display: 'Termos de uso', icon: FileSignature },
 ]
 </script>
