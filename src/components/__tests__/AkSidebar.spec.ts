@@ -25,6 +25,7 @@ const asUser = (canReview: boolean, isAdmin = false): SessionUser => ({
   name: 'Ana Souza',
   email: 'ana@akpedia.local',
   sector: 'Setor 1',
+  roles: [],
   canReview,
   isAdmin,
 })
@@ -51,6 +52,14 @@ describe('AkSidebar', () => {
     const text = mountSidebar().text()
     expect(text).toContain('Administração')
     expect(text).toContain('Termos de uso')
+  })
+
+  it('leaves "Minha conta" to the user menu in the header', () => {
+    user.value = asUser(false)
+    const targets = mountSidebar()
+      .findAllComponents(RouterLinkStub)
+      .map((link) => link.props('to'))
+    expect(targets).not.toContain('/conta')
   })
 
   it('hides the Administração section from everyone else', () => {

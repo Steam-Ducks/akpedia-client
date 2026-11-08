@@ -1,8 +1,16 @@
 <script lang="ts" setup>
-import { LogOut } from '@lucide/vue'
+import { LogOut, UserRound } from '@lucide/vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { logout, sessionUser } from '@/services/auth'
 
 const open = ref(false)
+const route = useRoute()
+
+// Close the menu once one of its links was followed.
+watch(
+  () => route.path,
+  () => (open.value = false),
+)
 
 /** First letters of the first and last names, e.g. "Ana Maria Souza" -> "AS". */
 const initials = computed(() => {
@@ -39,7 +47,11 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
           <span class="text-muted">{{ sessionUser?.email }}</span>
           <span v-if="sessionUser?.sector" class="text-muted">{{ sessionUser.sector }}</span>
         </div>
-        <button type="button" class="logout text-button" role="menuitem" @click="logout()">
+        <RouterLink to="/conta" class="menu-item text-button" role="menuitem">
+          <UserRound :size="16" aria-hidden="true" />
+          Minha conta
+        </RouterLink>
+        <button type="button" class="menu-item text-button" role="menuitem" @click="logout()">
           <LogOut :size="16" aria-hidden="true" />
           Sair
         </button>
@@ -98,8 +110,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
   margin-bottom: var(--spacing-2);
   overflow-wrap: anywhere;
 }
-.logout {
+.menu-item {
   width: 100%;
+  text-decoration: none;
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
@@ -109,7 +122,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutsideClick)
   cursor: pointer;
   transition: all 200ms ease;
 }
-.logout:hover {
+.menu-item:hover {
   color: var(--color-text);
   background-color: var(--color-background-hover);
 }

@@ -11,6 +11,8 @@ export type SessionUser = {
   name: string
   email: string
   sector: string | null
+  /** Realm roles from the token, e.g. ["STANDARD", "APPROVER"]; Keycloak's own ones included. */
+  roles: string[]
   canReview: boolean
   /** Publishes the terms of use. */
   isAdmin: boolean
@@ -45,6 +47,7 @@ function readUser(): SessionUser | null {
     name: token.name || token.preferred_username || token.email || '',
     email: token.email ?? '',
     sector: token.sector ?? null,
+    roles,
     canReview: roles.some((role) => REVIEWER_ROLES.includes(role)),
     isAdmin: roles.includes('ADMIN'),
   }
@@ -81,6 +84,23 @@ export async function accessToken(): Promise<string | null> {
     return null
   }
   return keycloak.token ?? null
+}
+
+/**
+ * Gets a fresh token right away, e.g. after the user changed their name, so that the header and
+ * {@link sessionUser} show what Keycloak now holds. If the session is gone, back to the login page.
+ */
+export async function refreshSession(): Promise<void> {
+  if (!keycloak.authenticated) return
+
+  try {
+    // -1: refresh whatever the token's validity.
+    await keycloak.updateToken(-1)
+  } catch {
+    await keycloak.login()
+    return
+  }
+  user.value = readUser()
 }
 
 /** The server turned the token down: log in again, back to the same page. */
