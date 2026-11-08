@@ -52,6 +52,7 @@ describe('AkSidebar', () => {
     const text = mountSidebar().text()
     expect(text).toContain('Administração')
     expect(text).toContain('Usuários')
+    expect(text).toContain('Auditoria')
     expect(text).toContain('Termos de uso')
     expect(text).not.toContain('Permissões opcionais')
   })
@@ -69,7 +70,9 @@ describe('AkSidebar', () => {
     const targets = mountSidebar()
       .findAllComponents(RouterLinkStub)
       .map((link) => link.props('to'))
-    expect(targets).toEqual(expect.arrayContaining(['/admin/users', '/admin/terms']))
+    expect(targets).toEqual(
+      expect.arrayContaining(['/admin/users', '/admin/audit', '/admin/terms']),
+    )
     expect(targets).not.toContain('/admin/optional-permissions')
   })
 
@@ -78,6 +81,7 @@ describe('AkSidebar', () => {
     const text = mountSidebar().text()
     expect(text).not.toContain('Administração')
     expect(text).not.toContain('Usuários')
+    expect(text).not.toContain('Auditoria')
     expect(text).not.toContain('Termos de uso')
   })
 })

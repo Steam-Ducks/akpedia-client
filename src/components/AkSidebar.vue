@@ -20,6 +20,7 @@ import {
   ClipboardCheck,
   FileSignature,
   FileText,
+  History,
   LayoutDashboard,
   Upload,
   Users,
@@ -55,6 +56,7 @@ const entryList = computed(() =>
 
 const adminEntryList: NavEntry[] = [
   { to: '/admin/users', display: 'Usuários', icon: Users },
+  { to: '/admin/audit', display: 'Auditoria', icon: History },
   { to: '/admin/terms', display: 'Termos de uso', icon: FileSignature },
 ]
 </script>
