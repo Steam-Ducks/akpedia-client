@@ -16,6 +16,7 @@
 </template>
 
 <script setup lang="ts">
+import { ClipboardCheck, FileSignature, FileText, LayoutDashboard, Upload } from '@lucide/vue'
 import { NavEntry } from './AkSidebarNav.vue'
 import logoUrl from '@/assets/images/akpedia-logo.png'
 import { sessionUser } from '@/services/auth'
@@ -24,25 +25,30 @@ const explorerMenuEntryList: NavEntry[] = [
   {
     to: '/',
     display: 'Visão geral',
+    icon: LayoutDashboard,
   },
   {
     to: '/docs',
     display: 'Documentos',
+    icon: FileText,
   },
   {
     to: '/upload',
     display: 'Enviar documento',
+    icon: Upload,
   },
 ]
 
-const reviewEntry: NavEntry = { to: '/review', display: 'Pendentes' }
+const reviewEntry: NavEntry = { to: '/review', display: 'Pendentes', icon: ClipboardCheck }
 
 /** "Pendentes" only for those who may review. */
 const entryList = computed(() =>
   sessionUser.value?.canReview ? [...explorerMenuEntryList, reviewEntry] : explorerMenuEntryList,
 )
 
-const adminEntryList: NavEntry[] = [{ to: '/admin/terms', display: 'Termos de uso' }]
+const adminEntryList: NavEntry[] = [
+  { to: '/admin/terms', display: 'Termos de uso', icon: FileSignature },
+]
 </script>
 
 <style lang="css" scoped>

@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 export type NavEntry = {
   to: string
   display: string
+  icon: Component
   disabled?: boolean
 }
 type Props = {
@@ -33,27 +35,10 @@ function isActive(to: string) {
           'sidebar-nav-item--disabled': disabled,
         }"
         :aria-disabled="disabled || undefined"
-        v-for="{ to, display, disabled } in entryList"
+        v-for="{ to, display, icon, disabled } in entryList"
         :key="to"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="lucide lucide-layout-dashboard-icon lucide-layout-dashboard"
-          aria-hidden="true"
-        >
-          <rect width="7" height="9" x="3" y="3" rx="1"></rect>
-          <rect width="7" height="5" x="14" y="3" rx="1"></rect>
-          <rect width="7" height="9" x="14" y="12" rx="1"></rect>
-          <rect width="7" height="5" x="3" y="16" rx="1"></rect>
-        </svg>
+        <component :is="icon" :size="18" aria-hidden="true" />
         {{ display }}
       </component>
     </nav>
@@ -84,7 +69,7 @@ function isActive(to: string) {
 
   display: flex;
   align-items: center;
-  gap: var(--spacing-1);
+  gap: var(--spacing-2);
   z-index: 0;
 
   text-decoration: none;
