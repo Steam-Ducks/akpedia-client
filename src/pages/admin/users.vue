@@ -10,6 +10,7 @@ import {
   updateUserStatus,
 } from '@/services/admin-users'
 import { sessionUser } from '@/services/auth'
+import { useProfileRequestsStore } from '@/stores/profile-requests-store'
 import { SECTORS } from '@/types/AdminUser'
 import type { AdminUser, NewUser, Role, RoleName } from '@/types/AdminUser'
 import { confirmAction } from '@/utils/confirm'
@@ -30,9 +31,27 @@ const search = ref('')
 const sectorFilter = ref('')
 const roleFilter = ref<RoleName | ''>('')
 
-/** "Usuários" or the e-mail/CPF change requests waiting for a decision. */
-const tab = ref<'users' | 'requests'>('users')
+const route = useRoute()
+const profileRequests = useProfileRequestsStore()
+
+/**
+ * "Usuários" or the e-mail/CPF change requests waiting for a decision. `?tab=requests` (the
+ * sidebar's link while some wait) opens on the requests.
+ */
+const tabFromQuery = (): 'users' | 'requests' =>
+  route.query.tab === 'requests' ? 'requests' : 'users'
+const tab = ref<'users' | 'requests'>(tabFromQuery())
+watch(
+  () => route.query.tab,
+  () => (tab.value = tabFromQuery()),
+)
 const pendingCount = ref<number | null>(null)
+
+/** The panel counted the pending requests: the sidebar's badge follows. */
+const onPendingCount = (count: number) => {
+  pendingCount.value = count
+  profileRequests.setPendingCount(count)
+}
 
 /** The user whose data is open in the edit dialog. */
 const editingUser = ref<AdminUser | null>(null)
@@ -323,7 +342,7 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
     <AkProfileRequestsPanel
       v-show="tab === 'requests'"
       class="requests-tab"
-      @count="pendingCount = $event"
+      @count="onPendingCount"
       @approved="load"
     />
 

@@ -7,6 +7,10 @@ export type NavEntry = {
   display: string
   icon: Component
   disabled?: boolean
+  /** A count shown next to the entry, such as requests waiting; hidden when 0 or absent. */
+  badge?: number
+  /** Read out with the badge, e.g. "3 solicitações aguardando análise". */
+  badgeLabel?: string
 }
 type Props = {
   title: string
@@ -17,8 +21,9 @@ defineProps<Props>()
 
 const route = useRoute()
 
+/** Active on the entry's page, whatever its query (a tab, say). */
 function isActive(to: string) {
-  return route.path === to
+  return route.path === to.split('?')[0]
 }
 </script>
 
@@ -35,11 +40,19 @@ function isActive(to: string) {
           'sidebar-nav-item--disabled': disabled,
         }"
         :aria-disabled="disabled || undefined"
-        v-for="{ to, display, icon, disabled } in entryList"
+        v-for="{ to, display, icon, disabled, badge, badgeLabel } in entryList"
         :key="to"
       >
         <component :is="icon" :size="18" aria-hidden="true" />
         {{ display }}
+        <span
+          v-if="badge"
+          class="sidebar-nav-badge"
+          :title="badgeLabel"
+          :aria-label="badgeLabel"
+          role="status"
+          >{{ badge > 99 ? '99+' : badge }}</span
+        >
       </component>
     </nav>
   </div>
@@ -76,6 +89,21 @@ function isActive(to: string) {
   cursor: pointer;
 
   transition: all 200ms ease;
+}
+
+.sidebar-nav-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--spacing-2);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-sm);
+  font-weight: 800;
+  color: var(--color-white);
+  background-color: var(--color-wine);
 }
 
 .sidebar-nav-item--disabled {

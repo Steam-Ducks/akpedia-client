@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
 import AkSidebar from '../AkSidebar.vue'
+import { fetchProfileRequests } from '@/services/admin-profile-requests'
 import type { SessionUser } from '@/services/auth'
 
 const user = ref<SessionUser | null>(null)
@@ -12,12 +14,23 @@ vi.mock('@/services/auth', () => ({
   },
 }))
 
+vi.mock('@/services/admin-profile-requests', () => ({ fetchProfileRequests: vi.fn() }))
+
+const pendingRequests = (total: number) =>
+  vi.mocked(fetchProfileRequests).mockResolvedValue({
+    content: [],
+    page: 0,
+    size: 1,
+    totalElements: total,
+    totalPages: total,
+  })
+
 vi.mock('vue-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('vue-router')>()),
   useRoute: () => ({ path: '/' }),
 }))
 
-const RouterLinkStub = { props: ['to'], template: '<a><slot /></a>' }
+const RouterLinkStub = { props: ['to'], template: '<a :href="to"><slot /></a>' }
 
 const mountSidebar = () => mount(AkSidebar, { global: { stubs: { RouterLink: RouterLinkStub } } })
 
@@ -32,6 +45,9 @@ const asUser = (canReview: boolean, isAdmin = false): SessionUser => ({
 
 describe('AkSidebar', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    pendingRequests(0)
     user.value = null
   })
 
@@ -87,5 +103,40 @@ describe('AkSidebar', () => {
     expect(text).not.toContain('Usuários')
     expect(text).not.toContain('Auditoria')
     expect(text).not.toContain('Termos de uso')
+  })
+
+  it('shows an admin how many change requests wait, linking to them', async () => {
+    pendingRequests(3)
+    user.value = asUser(true, true)
+
+    const wrapper = mountSidebar()
+    await flushPromises()
+
+    const badge = wrapper.get('.sidebar-nav-badge')
+    expect(badge.text()).toBe('3')
+    expect(badge.attributes('aria-label')).toBe('3 solicitações de alteração aguardando análise')
+    const targets = wrapper.findAll('a').map((link) => link.attributes('href'))
+    expect(targets).toContain('/admin/users?tab=requests')
+    expect(fetchProfileRequests).toHaveBeenCalledWith({ status: 'PENDING', size: 1 })
+    wrapper.unmount()
+  })
+
+  it('shows no badge when nothing waits', async () => {
+    user.value = asUser(true, true)
+
+    const wrapper = mountSidebar()
+    await flushPromises()
+
+    expect(wrapper.find('.sidebar-nav-badge').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('does not ask for the requests for someone who is not an admin', async () => {
+    user.value = asUser(true)
+
+    mountSidebar().unmount()
+    await flushPromises()
+
+    expect(fetchProfileRequests).not.toHaveBeenCalled()
   })
 })

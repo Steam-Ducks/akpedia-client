@@ -29,6 +29,7 @@ import {
 import { NavEntry } from './AkSidebarNav.vue'
 import logoUrl from '@/assets/images/akpedia-logo.png'
 import { sessionUser } from '@/services/auth'
+import { useProfileRequestsStore } from '@/stores/profile-requests-store'
 
 const explorerMenuEntryList: NavEntry[] = [
   {
@@ -55,12 +56,37 @@ const entryList = computed(() =>
   sessionUser.value?.canReview ? [...explorerMenuEntryList, reviewEntry] : explorerMenuEntryList,
 )
 
-const adminEntryList: NavEntry[] = [
-  { to: '/admin/users', display: 'Usuários', icon: Users },
-  { to: '/admin/permissions', display: 'Permissões', icon: ShieldCheck },
-  { to: '/admin/audit', display: 'Auditoria', icon: History },
-  { to: '/admin/terms', display: 'Termos de uso', icon: FileSignature },
-]
+const profileRequests = useProfileRequestsStore()
+
+/** With requests waiting, "Usuários" shows how many and opens on them. */
+const adminEntryList = computed<NavEntry[]>(() => {
+  const pending = profileRequests.pendingCount
+  return [
+    pending > 0
+      ? {
+          to: '/admin/users?tab=requests',
+          display: 'Usuários',
+          icon: Users,
+          badge: pending,
+          badgeLabel:
+            pending === 1
+              ? '1 solicitação de alteração aguardando análise'
+              : `${pending} solicitações de alteração aguardando análise`,
+        }
+      : { to: '/admin/users', display: 'Usuários', icon: Users },
+    { to: '/admin/permissions', display: 'Permissões', icon: ShieldCheck },
+    { to: '/admin/audit', display: 'Auditoria', icon: History },
+    { to: '/admin/terms', display: 'Termos de uso', icon: FileSignature },
+  ]
+})
+
+// Only admins decide requests, so only they keep the count.
+watch(
+  () => sessionUser.value?.isAdmin,
+  (isAdmin) => (isAdmin ? profileRequests.watchPending() : profileRequests.stopWatching()),
+  { immediate: true },
+)
+onBeforeUnmount(() => profileRequests.stopWatching())
 </script>
 
 <style lang="css" scoped>

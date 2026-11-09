@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { ref } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
+import { reactive, ref } from 'vue'
 import AdminUsersPage from '../admin/users.vue'
 import {
   createUser,
@@ -15,11 +16,18 @@ import {
   fetchProfileRequests,
   rejectProfileRequest,
 } from '@/services/admin-profile-requests'
+import { useProfileRequestsStore } from '@/stores/profile-requests-store'
 import type { ChangeRequest } from '@/types/Profile'
 import type { SessionUser } from '@/services/auth'
 import type { AdminUser, Role } from '@/types/AdminUser'
 
 const session = ref<SessionUser | null>(null)
+const route = reactive({ query: {} as Record<string, string> })
+
+vi.mock('vue-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('vue-router')>()),
+  useRoute: () => route,
+}))
 
 import { confirmAction } from '@/utils/confirm'
 
@@ -145,6 +153,8 @@ const row = (wrapper: Awaited<ReturnType<typeof mountPage>>, id: string) =>
 describe('admin users page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setActivePinia(createPinia())
+    route.query = {}
     session.value = {
       name: 'Admin Akpedia',
       email: 'admin@akpedia.local',
@@ -482,6 +492,22 @@ describe('admin users page', () => {
 
       expect(fetchProfileRequests).toHaveBeenCalledWith({ status: 'PENDING', page: 0, size: 50 })
       expect(wrapper.get('.tab-requests .tab-count').text()).toBe('2')
+    })
+
+    it('passes the count on to the sidebar badge', async () => {
+      withRequests([pendingRequest()])
+      await mountPage()
+
+      expect(useProfileRequestsStore().pendingCount).toBe(1)
+    })
+
+    it('opens on the requests with ?tab=requests, the sidebar link while some wait', async () => {
+      route.query = { tab: 'requests' }
+      withRequests([pendingRequest()])
+
+      const wrapper = await mountPage()
+
+      expect(wrapper.get('.tab-requests').attributes('aria-selected')).toBe('true')
     })
 
     it('has no count when nothing waits', async () => {
