@@ -27,12 +27,14 @@ const LABEL_BY_ACTION: Record<string, string> = {
   PROFILE_CHANGE_APPROVED: 'Aprovou uma alteração de e-mail ou CPF',
   PROFILE_CHANGE_REJECTED: 'Recusou uma alteração de e-mail ou CPF',
   USER_UPDATED: 'Alterou os dados de um usuário',
+  SECTOR_CATEGORIES_CHANGED: 'Alterou as categorias de um setor',
 }
 
 const LABEL_BY_ENTITY: Record<string, string> = {
   TERMS_VERSION: 'Termos',
   DOCUMENT: 'Documento',
   USER: 'Usuário',
+  SECTOR: 'Setor',
   PROFILE_CHANGE_REQUEST: 'Solicitação de alteração',
 }
 

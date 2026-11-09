@@ -24,7 +24,7 @@ const mountSidebar = () => mount(AkSidebar, { global: { stubs: { RouterLink: Rou
 const asUser = (canReview: boolean, isAdmin = false): SessionUser => ({
   name: 'Ana Souza',
   email: 'ana@akpedia.local',
-  sector: 'Setor 1',
+  sector: 'Engenharia',
   roles: [],
   canReview,
   isAdmin,
@@ -71,9 +71,13 @@ describe('AkSidebar', () => {
       .findAllComponents(RouterLinkStub)
       .map((link) => link.props('to'))
     expect(targets).toEqual(
-      expect.arrayContaining(['/admin/users', '/admin/audit', '/admin/terms']),
+      expect.arrayContaining([
+        '/admin/users',
+        '/admin/permissions',
+        '/admin/audit',
+        '/admin/terms',
+      ]),
     )
-    expect(targets).not.toContain('/admin/optional-permissions')
   })
 
   it('hides the Administração section from everyone else', () => {

@@ -22,6 +22,7 @@ import {
   FileText,
   History,
   LayoutDashboard,
+  ShieldCheck,
   Upload,
   Users,
 } from '@lucide/vue'
@@ -56,6 +57,7 @@ const entryList = computed(() =>
 
 const adminEntryList: NavEntry[] = [
   { to: '/admin/users', display: 'Usuários', icon: Users },
+  { to: '/admin/permissions', display: 'Permissões', icon: ShieldCheck },
   { to: '/admin/audit', display: 'Auditoria', icon: History },
   { to: '/admin/terms', display: 'Termos de uso', icon: FileSignature },
 ]
