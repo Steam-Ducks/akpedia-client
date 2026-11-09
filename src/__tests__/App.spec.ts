@@ -93,6 +93,7 @@ describe('App', () => {
     vi.mocked(acceptTerms).mockResolvedValue({ version: '2.0', acceptedAt: new Date() })
     const wrapper = await mountApp()
 
+    await wrapper.get('.terms-agree-box').setValue(true)
     await wrapper.get('.terms-accept').trigger('click')
     await flushPromises()
 

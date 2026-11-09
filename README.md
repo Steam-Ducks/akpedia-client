@@ -95,7 +95,8 @@ estão no README do `akpedia-server`.
   quem abre uma página dessas pela URL sem o papel vai para `/no-permission`, que explica o
   motivo (`src/route-access.ts`). O servidor recusa essas rotas de qualquer forma.
 - **Termos de uso**: depois do login, quem ainda não aceitou a versão atual vê os termos antes de
-  qualquer tela. **Aceitar** libera o app; **Recusar e sair** encerra a sessão. Enquanto não houver
+  qualquer tela. **Aceitar** só fica disponível depois de marcar que leu e aceita a versão, e
+  libera o app; não aceitar exclui a conta. Enquanto não houver
   aceite, o servidor recusa as outras chamadas (403 `terms_not_accepted`), e se uma versão nova
   for publicada com o usuário no app, a tela de termos volta. Os administradores (`ADMIN`)
   publicam as versões em **Administração › Termos de uso** (`/admin/terms`), partindo do texto

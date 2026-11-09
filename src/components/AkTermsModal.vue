@@ -10,6 +10,9 @@ const { current, accepted, accepting, error } = storeToRefs(termsStore)
 
 const dialog = ref<HTMLElement | null>(null)
 
+/** Accepting takes ticking the box first: the user says they read the text. */
+const agreed = ref(false)
+
 /**
  * Not accepting means leaving for good: the confirmation records the refusal, deletes the account
  * and logs out. Until then the terms stay on screen, inert behind it.
@@ -57,6 +60,11 @@ onMounted(() => dialog.value?.focus())
 
       <div class="terms-content" tabindex="0">{{ current.content }}</div>
 
+      <label class="terms-agree">
+        <input v-model="agreed" type="checkbox" class="terms-agree-box" required />
+        <span>Li e aceito os termos de uso da versão {{ current.version }}.</span>
+      </label>
+
       <div v-if="error" class="terms-error" role="alert">
         <CircleAlert :size="19" />
         <span>{{ error }}</span>
@@ -77,7 +85,8 @@ onMounted(() => dialog.value?.focus())
           type="button"
           color="primary"
           class="terms-accept"
-          :disabled="accepting"
+          :disabled="accepting || !agreed"
+          :title="agreed ? '' : 'Marque que leu e aceita os termos para continuar.'"
           @click="termsStore.accept()"
         >
           {{ accepting ? 'Aceitando…' : 'Aceitar' }}
@@ -146,6 +155,18 @@ onMounted(() => dialog.value?.focus())
   line-height: 1.5;
   white-space: pre-line;
   overflow-wrap: anywhere;
+}
+.terms-agree {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  cursor: pointer;
+}
+.terms-agree-box {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
 }
 .terms-error {
   display: flex;

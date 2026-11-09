@@ -67,12 +67,20 @@ describe('AkTermsModal', () => {
     expect(mount(AkTermsModal).text()).toContain('Você aceitou a versão 2.0; os termos mudaram.')
   })
 
-  it('accepts the terms', async () => {
+  it('accepts the terms once the box saying they were read is ticked', async () => {
     const store = useTermsStore()
     store.current = version('3.0')
     const accept = vi.spyOn(store, 'accept').mockResolvedValue()
+    const wrapper = mount(AkTermsModal)
 
-    await mount(AkTermsModal).get('.terms-accept').trigger('click')
+    expect(wrapper.text()).toContain('Li e aceito os termos de uso da versão 3.0.')
+    expect(wrapper.get('.terms-accept').attributes('disabled')).toBeDefined()
+    await wrapper.get('.terms-accept').trigger('click')
+    expect(accept).not.toHaveBeenCalled()
+
+    await wrapper.get('.terms-agree-box').setValue(true)
+    expect(wrapper.get('.terms-accept').attributes('disabled')).toBeUndefined()
+    await wrapper.get('.terms-accept').trigger('click')
 
     expect(accept).toHaveBeenCalled()
   })
