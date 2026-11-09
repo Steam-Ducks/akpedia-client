@@ -27,6 +27,10 @@ describe('terms store', () => {
     vi.clearAllMocks()
   })
 
+  it('has nothing pending until told so', () => {
+    expect(useTermsStore().pending).toBe(false)
+  })
+
   it('has nothing to accept while no terms were published', async () => {
     vi.mocked(fetchTerms).mockResolvedValue({ current: null, accepted: null })
 
@@ -99,6 +103,16 @@ describe('terms store', () => {
     expect(store.pending).toBe(true)
     expect(store.error).toBe('Falhou.')
     expect(store.accepting).toBe(false)
+  })
+
+  it('keeps what GET /me said when the terms cannot be loaded', async () => {
+    vi.mocked(fetchTerms).mockRejectedValue(new Error('Sem conexão.'))
+    const store = useTermsStore()
+    store.pending = true
+
+    await store.load()
+
+    expect(store.pending).toBe(true)
   })
 
   it('reports a failed first load', async () => {

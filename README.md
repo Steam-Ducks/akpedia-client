@@ -94,11 +94,13 @@ estão no README do `akpedia-server`.
   para `APPROVER` e `ADMIN`, `/admin/*` só para `ADMIN`. O menu mostra só o que o papel usa, e
   quem abre uma página dessas pela URL sem o papel vai para `/no-permission`, que explica o
   motivo (`src/route-access.ts`). O servidor recusa essas rotas de qualquer forma.
-- **Termos de uso**: depois do login, quem ainda não aceitou a versão atual vê os termos antes de
-  qualquer tela. **Aceitar** só fica disponível depois de marcar que leu e aceita a versão, e
-  libera o app; não aceitar exclui a conta. Enquanto não houver
-  aceite, o servidor recusa as outras chamadas (403 `terms_not_accepted`), e se uma versão nova
-  for publicada com o usuário no app, a tela de termos volta. Os administradores (`ADMIN`)
+- **Termos de uso**: depois do login, o app lê `terms_pending` em `GET /api/v1/me` (a mesma
+  chamada que traz o problema de CPF). Quem ainda não aceitou a versão atual vai para a página
+  `/accept-terms`, sem menu nem cabeçalho, antes de qualquer outra, guardando em `from` o
+  endereço que abriu. **Aceitar** só fica disponível depois de marcar que leu e aceita a versão,
+  e leva de volta a esse endereço; não aceitar exclui a conta. Enquanto não houver aceite, o
+  servidor recusa as outras chamadas (403 `terms_pending`), e se uma versão nova for publicada
+  com o usuário no app, ele volta para a página de termos. Os administradores (`ADMIN`)
   publicam as versões em **Administração › Termos de uso** (`/admin/terms`), partindo do texto
   da versão atual; cada publicação vira uma nova versão que todos, o admin incluído, precisam
   aceitar. Enquanto nenhuma versão for publicada, ninguém precisa aceitar nada.

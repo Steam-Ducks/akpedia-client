@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { acceptTerms, declineTerms, fetchTerms, TermsChangedError } from '@/services/terms'
 import type { TermsAcceptance, TermsVersion } from '@/types/Terms'
 
@@ -12,10 +12,11 @@ export const useTermsStore = defineStore('terms', () => {
   const accepting = ref(false)
   const error = ref<string | null>(null)
 
-  /** The current version still has to be accepted. Nothing to accept while none was published. */
-  const pending = computed(
-    () => current.value !== null && accepted.value?.version !== current.value.version,
-  )
+  /**
+   * The current version still has to be accepted. Comes from `GET /me` (`terms_pending`), from a
+   * call the server refused with 403 `terms_pending`, and from the terms read on the terms page.
+   */
+  const pending = ref(false)
 
   /** Guards against an older, slower request overwriting the result of a newer one. */
   let latestRequest = 0
@@ -30,6 +31,8 @@ export const useTermsStore = defineStore('terms', () => {
       if (request !== latestRequest) return
       current.value = terms.current
       accepted.value = terms.accepted
+      // Nothing to accept while none was published.
+      pending.value = terms.current !== null && terms.accepted?.version !== terms.current.version
       status.value = 'done'
     } catch (e) {
       if (request !== latestRequest) return
@@ -45,6 +48,7 @@ export const useTermsStore = defineStore('terms', () => {
 
     try {
       accepted.value = await acceptTerms(current.value.version)
+      pending.value = false
     } catch (e) {
       if (e instanceof TermsChangedError) {
         // A newer version was published while this one was on screen: show that one instead.

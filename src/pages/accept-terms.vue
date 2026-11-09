@@ -5,15 +5,18 @@ import logoUrl from '@/assets/images/akpedia-logo.png'
 import { useTermsStore } from '@/stores/terms-store'
 import { formatDate } from '@/utils/date'
 
-const termsStore = useTermsStore()
-const { current, accepted, accepting, error } = storeToRefs(termsStore)
+// The current terms of use, while they are pending: App.vue and the router send the user here
+// before any other page, and back once they are accepted.
 
-const dialog = ref<HTMLElement | null>(null)
+const termsStore = useTermsStore()
+const { current, accepted, status, accepting, error } = storeToRefs(termsStore)
+
+const card = ref<HTMLElement | null>(null)
 
 /** Accepting takes ticking the box first: the user says they read the text. */
 const agreed = ref(false)
 
-// A newer version came in while the dialog was open: it has to be read and ticked again.
+// A newer version came in while this one was on screen: it has to be read and ticked again.
 watch(
   () => current.value?.version,
   () => {
@@ -30,30 +33,30 @@ const confirmingDeletion = ref(false)
 const cancelDeletion = async () => {
   confirmingDeletion.value = false
   await nextTick()
-  dialog.value?.focus()
+  card.value?.focus()
 }
 
-// The rest of the app is inert behind the dialog, so focus can only move inside it. Esc does
-// nothing on purpose: the terms are accepted or the account is deleted.
-onMounted(() => dialog.value?.focus())
+onMounted(async () => {
+  await termsStore.load()
+  card.value?.focus()
+})
 </script>
 
 <template>
-  <div v-if="current" class="ak-terms-modal">
-    <div
-      ref="dialog"
+  <main class="ak-accept-terms">
+    <section
+      v-if="current"
+      ref="card"
       :inert="confirmingDeletion || undefined"
       :aria-hidden="confirmingDeletion ? 'true' : undefined"
-      class="terms-dialog"
-      role="dialog"
-      aria-modal="true"
+      class="terms-card"
       aria-labelledby="terms-title"
       aria-describedby="terms-intro"
       tabindex="-1"
     >
       <div class="terms-header">
         <img :src="logoUrl" alt="Akpedia" class="terms-logo" />
-        <div id="terms-title" class="text-title-large">{{ current.title }}</div>
+        <h1 id="terms-title" class="text-title-large">{{ current.title }}</h1>
         <div class="text-muted">
           Versão {{ current.version }}, publicada em {{ formatDate(current.publishedAt) }}
         </div>
@@ -100,27 +103,33 @@ onMounted(() => dialog.value?.focus())
           {{ accepting ? 'Aceitando…' : 'Aceitar' }}
         </AkButton>
       </div>
+    </section>
+
+    <div v-else-if="status === 'error'" class="terms-message">
+      <span class="text-muted">{{ error }}</span>
+      <AkButton type="button" @click="termsStore.load()">Tentar novamente</AkButton>
     </div>
+    <div v-else class="terms-message text-muted" role="status">Carregando os termos de uso…</div>
+
     <AkDeleteAccountDialog
       v-if="confirmingDeletion"
       :before-delete="termsStore.decline"
       @cancel="cancelDeletion"
     />
-  </div>
+  </main>
 </template>
 
 <style lang="css" scoped>
-.ak-terms-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
+.ak-accept-terms {
+  height: 100%;
+  overflow-y: auto;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: var(--spacing-5);
-  background-color: rgb(from var(--color-black) r g b / 0.55);
+  background-color: var(--color-background);
 }
-.terms-dialog {
+.terms-card {
   width: 100%;
   max-width: 720px;
   max-height: 100%;
@@ -137,6 +146,9 @@ onMounted(() => dialog.value?.focus())
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
+}
+.terms-header h1 {
+  margin: 0;
 }
 .terms-logo {
   display: block;
@@ -190,5 +202,12 @@ onMounted(() => dialog.value?.focus())
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: var(--spacing-3);
+}
+.terms-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-4);
+  text-align: center;
 }
 </style>

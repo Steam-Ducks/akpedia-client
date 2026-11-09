@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
-import AkTermsModal from '../AkTermsModal.vue'
+import AcceptTermsPage from '../accept-terms.vue'
 import { useTermsStore } from '@/stores/terms-store'
 import { deleteMyAccount } from '@/services/account'
 import { logout } from '@/services/auth'
-import { declineTerms } from '@/services/terms'
-import type { TermsVersion } from '@/types/Terms'
+import { declineTerms, fetchTerms } from '@/services/terms'
+import type { TermsAcceptance, TermsVersion } from '@/types/Terms'
 
 vi.mock('@/services/auth', () => ({ logout: vi.fn() }))
 vi.mock('@/services/account', () => ({ deleteMyAccount: vi.fn() }))
@@ -26,53 +26,80 @@ const version = (number: string): TermsVersion => ({
   publishedBy: 'Admin Akpedia',
 })
 
-describe('AkTermsModal', () => {
+/** Mounts the page once GET /terms answered with these terms. */
+const mountPage = async (
+  current: TermsVersion | null = version('3.0'),
+  accepted: TermsAcceptance | null = null,
+) => {
+  vi.mocked(fetchTerms).mockResolvedValue({ current, accepted })
+  const wrapper = mount(AcceptTermsPage, { attachTo: document.body })
+  await flushPromises()
+  return wrapper
+}
+
+describe('accept-terms page', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    document.body.innerHTML = ''
   })
 
-  it('shows the current version as plain text in a modal dialog', () => {
-    useTermsStore().current = version('3.0')
+  it('says it is loading until the terms come', () => {
+    vi.mocked(fetchTerms).mockReturnValue(new Promise(() => {}))
 
-    const wrapper = mount(AkTermsModal)
+    const wrapper = mount(AcceptTermsPage)
 
-    const dialog = wrapper.get('[role="dialog"]')
-    expect(dialog.attributes('aria-modal')).toBe('true')
-    expect(wrapper.get(`#${dialog.attributes('aria-labelledby')}`).text()).toBe('Termos de uso')
+    expect(wrapper.get('[role="status"]').text()).toBe('Carregando os termos de uso…')
+    expect(wrapper.find('.terms-accept').exists()).toBe(false)
+  })
+
+  it('shows the current version as plain text, and focuses it', async () => {
+    const wrapper = await mountPage()
+
+    const card = wrapper.get('.terms-card')
+    expect(wrapper.get(`#${card.attributes('aria-labelledby')}`).text()).toBe('Termos de uso')
     expect(wrapper.text()).toContain('Versão 3.0, publicada em 06/11/2026')
     const content = wrapper.get('.terms-content')
     expect(content.text()).toContain('<b>sem HTML</b>')
     expect(content.find('b').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('os termos mudaram')
+    expect(document.activeElement).toBe(card.element)
+    wrapper.unmount()
   })
 
-  it('has no way to be dismissed but accepting or deleting the account', async () => {
-    useTermsStore().current = version('3.0')
-    const wrapper = mount(AkTermsModal)
+  it('offers only accepting or deleting the account', async () => {
+    const wrapper = await mountPage()
 
-    await wrapper.get('[role="dialog"]').trigger('keydown', { key: 'Escape' })
-
-    expect(wrapper.find('[role="dialog"]').exists()).toBe(true)
     expect(wrapper.findAll('button').map((button) => button.text())).toEqual([
       'Não aceito e desejo excluir minha conta',
       'Aceitar',
     ])
+    wrapper.unmount()
   })
 
-  it('says the terms changed when an older version was accepted', () => {
-    const store = useTermsStore()
-    store.current = version('3.0')
-    store.accepted = { version: '2.0', acceptedAt: new Date() }
+  it('offers to try again when the terms cannot be loaded', async () => {
+    vi.mocked(fetchTerms).mockRejectedValueOnce(new Error('Sem conexão.'))
+    const wrapper = mount(AcceptTermsPage)
+    await flushPromises()
+    expect(wrapper.text()).toContain('Sem conexão.')
 
-    expect(mount(AkTermsModal).text()).toContain('Você aceitou a versão 2.0; os termos mudaram.')
+    vi.mocked(fetchTerms).mockResolvedValueOnce({ current: version('3.0'), accepted: null })
+    await wrapper.get('button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.terms-card').exists()).toBe(true)
+  })
+
+  it('says the terms changed when an older version was accepted', async () => {
+    const wrapper = await mountPage(version('3.0'), { version: '2.0', acceptedAt: new Date() })
+
+    expect(wrapper.text()).toContain('Você aceitou a versão 2.0; os termos mudaram.')
+    wrapper.unmount()
   })
 
   it('accepts the terms once the box saying they were read is ticked', async () => {
-    const store = useTermsStore()
-    store.current = version('3.0')
-    const accept = vi.spyOn(store, 'accept').mockResolvedValue()
-    const wrapper = mount(AkTermsModal)
+    const wrapper = await mountPage()
+    const accept = vi.spyOn(useTermsStore(), 'accept').mockResolvedValue()
 
     expect(wrapper.text()).toContain('Li e aceito os termos de uso da versão 3.0.')
     expect(wrapper.get('.terms-accept').attributes('disabled')).toBeDefined()
@@ -84,25 +111,24 @@ describe('AkTermsModal', () => {
     await wrapper.get('.terms-accept').trigger('click')
 
     expect(accept).toHaveBeenCalled()
+    wrapper.unmount()
   })
 
   it('unticks the box when a newer version replaces the one on screen', async () => {
-    const store = useTermsStore()
-    store.current = version('3.0')
-    const wrapper = mount(AkTermsModal)
+    const wrapper = await mountPage()
     await wrapper.get('.terms-agree-box').setValue(true)
 
-    store.current = version('4.0')
+    useTermsStore().current = version('4.0')
     await nextTick()
 
     expect((wrapper.get('.terms-agree-box').element as HTMLInputElement).checked).toBe(false)
     expect(wrapper.get('.terms-accept').attributes('disabled')).toBeDefined()
+    wrapper.unmount()
   })
 
   describe('not accepting', () => {
     const openConfirm = async () => {
-      useTermsStore().current = version('3.0')
-      const wrapper = mount(AkTermsModal, { attachTo: document.body })
+      const wrapper = await mountPage()
       await wrapper.get('.terms-decline').trigger('click')
       return wrapper
     }
@@ -113,17 +139,13 @@ describe('AkTermsModal', () => {
       await flushPromises()
     }
 
-    beforeEach(() => {
-      document.body.innerHTML = ''
-    })
-
     it('asks for confirmation first, over the inert terms', async () => {
       const wrapper = await openConfirm()
 
       const confirmDialog = wrapper.get('form[role="dialog"]')
       expect(confirmDialog.text()).toContain('Excluir a sua conta?')
       expect(confirmDialog.text()).toContain('só um administrador poderá cadastrá-lo de novo')
-      expect(wrapper.get('.terms-dialog').attributes('inert')).toBeDefined()
+      expect(wrapper.get('.terms-card').attributes('inert')).toBeDefined()
       expect(declineTerms).not.toHaveBeenCalled()
       expect(deleteMyAccount).not.toHaveBeenCalled()
       wrapper.unmount()
@@ -182,7 +204,7 @@ describe('AkTermsModal', () => {
       await flushPromises()
 
       expect(wrapper.find('form[role="dialog"]').exists()).toBe(false)
-      const terms = wrapper.get('.terms-dialog')
+      const terms = wrapper.get('.terms-card')
       expect(terms.attributes('inert')).toBeUndefined()
       expect(document.activeElement).toBe(terms.element)
       expect(declineTerms).not.toHaveBeenCalled()
