@@ -10,6 +10,8 @@ import {
 import type { AuditEntry, AuditKind } from '@/types/Audit'
 import { formatDateTime } from '@/utils/date'
 
+definePage({ meta: { roles: ['ADMIN'] } })
+
 const PAGE_SIZE = 50
 const FILTER_DELAY_MS = 300
 

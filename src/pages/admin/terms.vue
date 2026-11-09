@@ -12,6 +12,8 @@ import type { TermsVersion } from '@/types/Terms'
 import { confirmAction } from '@/utils/confirm'
 import { formatDate } from '@/utils/date'
 
+definePage({ meta: { roles: ['ADMIN'] } })
+
 const CONFIRM_MESSAGE =
   'Todos os usuários, você incluído, terão que aceitar esta nova versão dos termos novamente.'
 

@@ -4,6 +4,8 @@ import { storeToRefs } from 'pinia'
 import { usePendingStore } from '@/stores/pending-store'
 import { formatRelativeDays } from '@/utils/date'
 
+definePage({ meta: { roles: ['APPROVER', 'ADMIN'] } })
+
 const router = useRouter()
 const pendingStore = usePendingStore()
 const { pendingDocuments, status, error } = storeToRefs(pendingStore)

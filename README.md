@@ -90,8 +90,10 @@ estão no README do `akpedia-server`.
   Se o servidor recusar o token (401), o navegador volta para o login.
 - O nome, o e-mail e o setor aparecem no menu do avatar, no cabeçalho, com o botão **Sair**,
   que encerra a sessão também no Keycloak.
-- **Pendentes** só aparece para quem tem o papel `APPROVER` ou `ADMIN`; os outros, ao abrir
-  `/review`, voltam para a página inicial. O servidor recusa essas rotas de qualquer forma.
+- Cada página declara os papéis que a abrem, com `definePage({ meta: { roles } })`: `/review`
+  para `APPROVER` e `ADMIN`, `/admin/*` só para `ADMIN`. O menu mostra só o que o papel usa, e
+  quem abre uma página dessas pela URL sem o papel vai para `/no-permission`, que explica o
+  motivo (`src/route-access.ts`). O servidor recusa essas rotas de qualquer forma.
 - **Termos de uso**: depois do login, quem ainda não aceitou a versão atual vê os termos antes de
   qualquer tela. **Aceitar** libera o app; **Recusar e sair** encerra a sessão. Enquanto não houver
   aceite, o servidor recusa as outras chamadas (403 `terms_not_accepted`), e se uma versão nova

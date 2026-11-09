@@ -13,6 +13,9 @@ import { sessionUser } from '@/services/auth'
 import { SECTORS } from '@/types/AdminUser'
 import type { AdminUser, NewUser, Role } from '@/types/AdminUser'
 import { confirmAction } from '@/utils/confirm'
+import { cpfProblem } from '@/utils/cpf'
+
+definePage({ meta: { roles: ['ADMIN'] } })
 
 const PAGE_SIZE = 20
 const SEARCH_DELAY_MS = 300

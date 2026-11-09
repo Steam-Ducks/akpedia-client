@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { routes } from 'vue-router/auto-routes'
+import { accessRedirect } from './route-access'
 import { sessionUser } from './services/auth'
 
 export const router = createRouter({
@@ -7,9 +8,6 @@ export const router = createRouter({
   routes,
 })
 
-// The review queue is for approvers and the admin pages for admins; the server refuses them to
-// anyone else anyway.
-router.beforeEach((to) => {
-  if (to.path.startsWith('/review') && !sessionUser.value?.canReview) return '/'
-  if (to.path.startsWith('/admin') && !sessionUser.value?.isAdmin) return '/'
-})
+// Each page declares the roles that may open it (definePage meta.roles): the review queue for
+// approvers, the admin pages for admins. Anyone else gets the "no permission" page.
+router.beforeEach((to) => accessRedirect(to, sessionUser.value?.roles ?? []))
