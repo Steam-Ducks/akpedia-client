@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
 import AkTermsModal from '../AkTermsModal.vue'
 import { useTermsStore } from '@/stores/terms-store'
 import { deleteMyAccount } from '@/services/account'
@@ -83,6 +84,19 @@ describe('AkTermsModal', () => {
     await wrapper.get('.terms-accept').trigger('click')
 
     expect(accept).toHaveBeenCalled()
+  })
+
+  it('unticks the box when a newer version replaces the one on screen', async () => {
+    const store = useTermsStore()
+    store.current = version('3.0')
+    const wrapper = mount(AkTermsModal)
+    await wrapper.get('.terms-agree-box').setValue(true)
+
+    store.current = version('4.0')
+    await nextTick()
+
+    expect((wrapper.get('.terms-agree-box').element as HTMLInputElement).checked).toBe(false)
+    expect(wrapper.get('.terms-accept').attributes('disabled')).toBeDefined()
   })
 
   describe('not accepting', () => {

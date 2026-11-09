@@ -13,6 +13,14 @@ const dialog = ref<HTMLElement | null>(null)
 /** Accepting takes ticking the box first: the user says they read the text. */
 const agreed = ref(false)
 
+// A newer version came in while the dialog was open: it has to be read and ticked again.
+watch(
+  () => current.value?.version,
+  () => {
+    agreed.value = false
+  },
+)
+
 /**
  * Not accepting means leaving for good: the confirmation records the refusal, deletes the account
  * and logs out. Until then the terms stay on screen, inert behind it.
