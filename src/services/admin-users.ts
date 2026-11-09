@@ -20,10 +20,13 @@ const DEFAULT_PAGE_SIZE = 20
 const MESSAGE_BY_CODE: Record<string, string> = {
   cannot_change_own_admin: 'Você não pode remover o seu próprio papel de administrador.',
   cannot_disable_self: 'Você não pode desativar a sua própria conta.',
+  last_admin:
+    'Esta pessoa é o único administrador ativo: dê o papel de administrador a outra pessoa antes.',
+  cpf_taken: 'Já existe uma conta com este CPF.',
   invalid_user: 'Dados inválidos: confira os campos e tente novamente.',
   invalid_profile: 'Dados inválidos: confira os campos e tente novamente.',
   nothing_changed: 'Nada mudou: altere algum campo antes de salvar.',
-  invalid_role: 'Papel inválido: só é possível atribuir os papéis Aprovador e Administrador.',
+  invalid_role: 'Papel inválido: escolha um dos papéis da lista.',
   user_exists: 'Já existe uma conta com este e-mail.',
   user_not_found: 'Usuário não encontrado. Ele pode ter sido removido do Keycloak.',
   keycloak_unavailable:
@@ -107,14 +110,21 @@ const putJson = (body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 })
 
-/** Keycloak's users, sorted as Keycloak returns them. `search` matches name, e-mail or login. */
+/**
+ * Keycloak's users, sorted as Keycloak returns them. `search` matches name, e-mail or login;
+ * `sector` and `role` narrow the list down.
+ */
 export async function fetchAdminUsers({
   search = '',
+  sector = '',
+  role = '',
   page = 0,
   size = DEFAULT_PAGE_SIZE,
 }: AdminUserQuery = {}): Promise<Page<AdminUser>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) })
   if (search.trim()) params.set('search', search.trim())
+  if (sector) params.set('sector', sector)
+  if (role) params.set('role', role)
 
   const users = await send<PageDto<AdminUserDto>>(
     `/api/v1/admin/users?${params}`,

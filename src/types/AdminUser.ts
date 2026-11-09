@@ -57,19 +57,26 @@ export type Role = {
 
 export type AdminUserQuery = {
   search?: string
+  /** Only this sector. */
+  sector?: string
+  /** Only users with APPROVER or ADMIN; STANDARD keeps those with neither. */
+  role?: RoleName | ''
   page?: number
   size?: number
 }
 
-/** The sectors the realm's User Profile allows (akpedia-server/keycloak/akpedia-realm.json). */
+/**
+ * The sectors the realm's User Profile allows (akpedia-server/keycloak/akpedia-realm.json), in
+ * the realm's order.
+ */
 export const SECTORS = [
-  'Setor 1',
-  'Setor 2',
-  'Setor 3',
-  'Setor 4',
-  'Setor 5',
-  'Setor 6',
-  'Setor 7',
+  'Engenharia',
+  'Qualidade',
+  'Logística',
+  'Manutenção',
+  'Recursos Humanos',
+  'Financeiro',
+  'Jurídico',
 ] as const
 
 /** What an admin fills in to create an account. */

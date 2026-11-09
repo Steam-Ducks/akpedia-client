@@ -11,7 +11,7 @@ import {
 } from '@/services/admin-users'
 import { sessionUser } from '@/services/auth'
 import { SECTORS } from '@/types/AdminUser'
-import type { AdminUser, NewUser, Role } from '@/types/AdminUser'
+import type { AdminUser, NewUser, Role, RoleName } from '@/types/AdminUser'
 import { confirmAction } from '@/utils/confirm'
 import { cpfProblem } from '@/utils/cpf'
 
@@ -27,6 +27,8 @@ const status = ref<'loading' | 'done' | 'error'>('loading')
 const loadError = ref<string | null>(null)
 
 const search = ref('')
+const sectorFilter = ref('')
+const roleFilter = ref<RoleName | ''>('')
 
 /** "Usuários" or the e-mail/CPF change requests waiting for a decision. */
 const tab = ref<'users' | 'requests'>('users')
@@ -62,14 +64,17 @@ const emptyNewUser = (): NewUser => ({
 })
 const newUser = ref<NewUser>(emptyNewUser())
 
-const cpfDigits = computed(() => newUser.value.cpf.replace(/\D/g, ''))
+const newCpfError = computed(() =>
+  newUser.value.cpf === '' ? null : cpfProblem(newUser.value.cpf),
+)
 const canCreate = computed(() => {
   const user = newUser.value
   return (
     !saving.value &&
     [user.firstName, user.lastName, user.email, user.sector].every((field) => field.trim()) &&
     user.password !== '' &&
-    cpfDigits.value.length === 11
+    user.cpf !== '' &&
+    !newCpfError.value
   )
 })
 
@@ -106,6 +111,8 @@ const load = async () => {
   try {
     const result = await fetchAdminUsers({
       search: search.value,
+      sector: sectorFilter.value,
+      role: roleFilter.value,
       page: page.value,
       size: PAGE_SIZE,
     })
@@ -142,6 +149,11 @@ watch(search, () => {
   }, SEARCH_DELAY_MS)
 })
 
+watch([sectorFilter, roleFilter], () => {
+  page.value = 0
+  load()
+})
+
 const replaceUser = (updated: AdminUser) => {
   users.value = users.value.map((user) => (user.id === updated.id ? updated : user))
 }
@@ -168,6 +180,17 @@ const roleLocked = (user: AdminUser, role: Role) =>
   role.name === 'ADMIN' && isSelf(user) && user.roles.includes('ADMIN')
 
 const saveRoles = async (user: AdminUser) => {
+  const who = user.name || user.email
+  const chosen = selectedRoles.value.map(roleLabel)
+  const confirmed = await confirmAction({
+    title: `Alterar os papéis de ${who}?`,
+    text: chosen.length
+      ? `A pessoa ficará com: ${chosen.join(', ')}, além do papel Padrão.`
+      : 'A pessoa ficará só com o papel Padrão.',
+    confirmText: 'Salvar papéis',
+  })
+  if (!confirmed) return
+
   clearFeedback()
   busyId.value = user.id
   try {
@@ -306,9 +329,21 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 
     <div v-show="tab === 'users'" class="users-tab">
       <div class="users-toolbar">
-        <AkInput v-model="search" class="users-search" placeholder="Buscar por nome ou e-mail">
-          <template #pre><Search :size="19" aria-hidden="true" /></template>
-        </AkInput>
+        <div class="users-filters">
+          <AkInput v-model="search" class="users-search" placeholder="Buscar por nome ou e-mail">
+            <template #pre><Search :size="19" aria-hidden="true" /></template>
+          </AkInput>
+          <AkSelect v-model="sectorFilter" class="filter-sector" aria-label="Filtrar por setor">
+            <option value="">Todos os setores</option>
+            <option v-for="sector in SECTORS" :key="sector" :value="sector">{{ sector }}</option>
+          </AkSelect>
+          <AkSelect v-model="roleFilter" class="filter-role" aria-label="Filtrar por papel">
+            <option value="">Todos os papéis</option>
+            <option value="STANDARD">Só Padrão</option>
+            <option value="APPROVER">Aprovador</option>
+            <option value="ADMIN">Administrador</option>
+          </AkSelect>
+        </div>
         <AkButton
           v-if="!creating"
           type="button"
@@ -343,12 +378,7 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
           <label class="form-field">
             <span class="text-label-small">CPF</span>
             <AkInput v-model="newUser.cpf" class="new-cpf" placeholder="Somente números" />
-            <span
-              v-if="newUser.cpf !== '' && cpfDigits.length !== 11"
-              class="text-muted field-hint"
-            >
-              O CPF deve ter 11 dígitos.
-            </span>
+            <span v-if="newCpfError" class="text-muted field-hint">{{ newCpfError }}</span>
           </label>
           <label class="form-field">
             <span class="text-label-small">Setor</span>
@@ -447,9 +477,7 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
                     </span>
                   </td>
                   <td>
-                    <span class="badge" :class="user.enabled ? 'badge--ok' : 'badge--muted'">
-                      {{ user.enabled ? 'Ativo' : 'Desativado' }}
-                    </span>
+                    <AkStatusChip :status="user.enabled ? 'ACTIVE' : 'DISABLED'" />
                   </td>
                   <td>
                     <div class="row-actions">
@@ -619,9 +647,20 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
   flex-wrap: wrap;
   gap: var(--spacing-4);
 }
+.users-filters {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+}
 .users-search {
   flex: 1;
+  min-width: 240px;
   max-width: 480px;
+}
+.filter-sector,
+.filter-role {
+  min-width: 180px;
 }
 .create-card {
   max-width: 820px;
@@ -721,10 +760,6 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 .badge--ok {
   color: var(--color-primary);
   background-color: var(--color-primary-selected);
-}
-.badge--muted {
-  color: var(--color-text-muted);
-  background-color: var(--color-background-hover);
 }
 .badge--alert {
   color: var(--color-white);

@@ -14,7 +14,7 @@ const profileDto = {
   last_name: 'Souza',
   email: 'ana@akpedia.local',
   cpf: '12345678901',
-  sector: 'Setor 3',
+  sector: 'Logística',
   roles: ['STANDARD'],
   editable: ['first_name', 'last_name', 'sector'],
   requestable: ['email', 'cpf'],
@@ -57,7 +57,7 @@ describe('profile service', () => {
       lastName: 'Souza',
       email: 'ana@akpedia.local',
       cpf: '12345678901',
-      sector: 'Setor 3',
+      sector: 'Logística',
       roles: ['STANDARD'],
       editable: ['first_name', 'last_name', 'sector'],
       requestable: ['email', 'cpf'],
@@ -71,7 +71,7 @@ describe('profile service', () => {
     const profile = await updateMyProfile({
       firstName: ' Ana Maria ',
       lastName: 'Souza ',
-      sector: 'Setor 3',
+      sector: 'Logística',
     })
 
     expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/me/profile')
@@ -79,7 +79,7 @@ describe('profile service', () => {
     expect(bodyOf(fetchMock)).toEqual({
       first_name: 'Ana Maria',
       last_name: 'Souza',
-      sector: 'Setor 3',
+      sector: 'Logística',
     })
     expect(profile.firstName).toBe('Ana Maria')
   })
@@ -88,7 +88,7 @@ describe('profile service', () => {
     vi.stubGlobal('fetch', failing(400, 'invalid_profile', 'O nome é obrigatório.'))
 
     await expect(
-      updateMyProfile({ firstName: '', lastName: 'Souza', sector: 'Setor 1' }),
+      updateMyProfile({ firstName: '', lastName: 'Souza', sector: 'Engenharia' }),
     ).rejects.toThrow('O nome é obrigatório.')
   })
 
@@ -96,7 +96,7 @@ describe('profile service', () => {
     vi.stubGlobal('fetch', failing(400, 'nothing_changed'))
 
     await expect(
-      updateMyProfile({ firstName: 'Ana', lastName: 'Souza', sector: 'Setor 3' }),
+      updateMyProfile({ firstName: 'Ana', lastName: 'Souza', sector: 'Logística' }),
     ).rejects.toThrow('Nada mudou')
   })
 

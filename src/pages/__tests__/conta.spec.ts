@@ -41,7 +41,7 @@ const profile: Profile = {
   lastName: 'Souza',
   email: 'ana@akpedia.local',
   cpf: '12345678901',
-  sector: 'Setor 3',
+  sector: 'Logística',
   roles: ['offline_access', 'STANDARD', 'APPROVER'],
   editable: ['first_name', 'last_name', 'sector'],
   requestable: ['email', 'cpf'],
@@ -74,7 +74,7 @@ describe('account page', () => {
     session.value = {
       name: 'Ana Souza',
       email: 'ana@akpedia.local',
-      sector: 'Setor 3',
+      sector: 'Logística',
       roles: ['offline_access', 'STANDARD', 'APPROVER'],
       canReview: true,
       isAdmin: false,
@@ -93,7 +93,7 @@ describe('account page', () => {
     expect(wrapper.get('.hero-avatar').text()).toBe('AS')
     expect(wrapper.get('.profile-name').text()).toBe('Ana Souza')
     expect(wrapper.get('.profile-email').text()).toBe('ana@akpedia.local')
-    expect(wrapper.get('.profile-sector').text()).toBe('Setor 3')
+    expect(wrapper.get('.profile-sector').text()).toBe('Logística')
     expect(wrapper.get('.profile-roles').text()).toBe('PadrãoAprovador')
   })
 
@@ -102,7 +102,7 @@ describe('account page', () => {
 
     expect((wrapper.get('.first-name input').element as HTMLInputElement).value).toBe('Ana')
     expect((wrapper.get('.last-name input').element as HTMLInputElement).value).toBe('Souza')
-    expect((wrapper.get('.sector select').element as HTMLSelectElement).value).toBe('Setor 3')
+    expect((wrapper.get('.sector select').element as HTMLSelectElement).value).toBe('Logística')
     expect(wrapper.get('.locked-email').text()).toContain('ana@akpedia.local')
     expect(wrapper.get('.locked-cpf').text()).toContain('123.456.789-01')
     expect(wrapper.find('.locked-email input').exists()).toBe(false)
@@ -124,14 +124,14 @@ describe('account page', () => {
     const wrapper = await mountPage()
 
     await wrapper.get('.first-name input').setValue('Ana Maria ')
-    await wrapper.get('.sector select').setValue('Setor 5')
+    await wrapper.get('.sector select').setValue('Recursos Humanos')
     await wrapper.get('.profile-form').trigger('submit')
     await flushPromises()
 
     expect(updateMyProfile).toHaveBeenCalledWith({
       firstName: 'Ana Maria ',
       lastName: 'Souza',
-      sector: 'Setor 5',
+      sector: 'Recursos Humanos',
     })
     expect(refreshSession).toHaveBeenCalledTimes(1)
     expect(wrapper.text()).toContain('Dados salvos.')

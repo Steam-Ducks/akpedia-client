@@ -20,6 +20,7 @@ const MESSAGE_BY_CODE: Record<string, string> = {
   change_request_not_found: 'Solicitação não encontrada. Ela pode já ter sido analisada.',
   change_request_not_pending: 'Esta solicitação já foi analisada.',
   user_exists: 'Já existe uma conta com este e-mail.',
+  cpf_taken: 'Já existe uma conta com este CPF.',
   user_not_found: 'Usuário não encontrado. Ele pode ter sido removido do Keycloak.',
   keycloak_unavailable:
     'Não foi possível falar com o Keycloak agora. Tente novamente em alguns instantes.',

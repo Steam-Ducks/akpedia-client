@@ -101,6 +101,12 @@ estão no README do `akpedia-server`.
   publicam as versões em **Administração › Termos de uso** (`/admin/terms`), partindo do texto
   da versão atual; cada publicação vira uma nova versão que todos, o admin incluído, precisam
   aceitar. Enquanto nenhuma versão for publicada, ninguém precisa aceitar nada.
+- **Administração › Usuários** (`/admin/users`): busca por nome ou e-mail, filtros por setor e
+  por papel, e status com o `AkStatusChip`. Salvar papéis, salvar os dados de alguém e
+  desativar ou reativar pedem confirmação, e o erro do servidor aparece na tela (por exemplo,
+  `last_admin` ao desativar o único administrador ativo, ou `cpf_taken`).
+- **Administração › Permissões** (`/admin/permissions`): a grade de setores por categorias, com
+  uma caixa por célula, salva por setor. Vale a partir da próxima busca.
 - O login exige um contexto seguro (`localhost` ou HTTPS): fora dele o navegador não oferece
   o Web Crypto que o PKCE usa.
 

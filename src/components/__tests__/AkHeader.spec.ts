@@ -5,7 +5,7 @@ import AkHeader from '../AkHeader.vue'
 import { logout } from '@/services/auth'
 
 vi.mock('@/services/auth', () => ({
-  sessionUser: ref({ name: 'Ana Maria Souza', email: 'ana@akpedia.local', sector: 'Setor 1' }),
+  sessionUser: ref({ name: 'Ana Maria Souza', email: 'ana@akpedia.local', sector: 'Engenharia' }),
   logout: vi.fn(),
 }))
 

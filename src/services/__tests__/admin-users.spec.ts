@@ -15,7 +15,7 @@ const userDto = {
   id: 'kc-1',
   name: 'Ana Souza',
   email: 'ana@akpedia.local',
-  sector: 'Setor 1',
+  sector: 'Engenharia',
   cpf: '12345678901',
   enabled: true,
   roles: ['STANDARD', 'APPROVER'],
@@ -58,7 +58,7 @@ describe('admin users service', () => {
       id: 'kc-1',
       name: 'Ana Souza',
       email: 'ana@akpedia.local',
-      sector: 'Setor 1',
+      sector: 'Engenharia',
       cpf: '12345678901',
       firstName: 'Ana',
       lastName: 'Souza',
@@ -160,7 +160,7 @@ describe('admin users service', () => {
       email: 'carla@akpedia.local ',
       password: 'segredo 123',
       cpf: '123.456.789-01',
-      sector: 'Setor 2',
+      sector: 'Qualidade',
       roles: ['APPROVER'],
     }
 
@@ -179,7 +179,7 @@ describe('admin users service', () => {
         email: 'carla@akpedia.local',
         password: 'segredo 123',
         cpf: '12345678901',
-        sector: 'Setor 2',
+        sector: 'Qualidade',
         roles: ['APPROVER'],
       })
       expect(user.roles).toEqual(['STANDARD', 'APPROVER'])
@@ -241,7 +241,7 @@ describe('admin users service', () => {
         lastName: 'Souza',
         email: 'ana@akpedia.local',
         cpf: '123.456.789-01',
-        sector: 'Setor 1',
+        sector: 'Engenharia',
       })
     })
 
@@ -254,7 +254,7 @@ describe('admin users service', () => {
         lastName: 'Souza',
         email: ' ana.souza@akpedia.local ',
         cpf: '123.456.789-01',
-        sector: 'Setor 2',
+        sector: 'Qualidade',
       })
 
       const [url, init] = fetchMock.mock.calls[0]
@@ -265,7 +265,7 @@ describe('admin users service', () => {
         last_name: 'Souza',
         email: 'ana.souza@akpedia.local',
         cpf: '12345678901',
-        sector: 'Setor 2',
+        sector: 'Qualidade',
       })
       expect(user.email).toBe('ana.souza@akpedia.local')
     })
@@ -283,7 +283,7 @@ describe('admin users service', () => {
           lastName: 'Souza',
           email: 'ana@akpedia.local',
           cpf: '12345678901',
-          sector: 'Setor 1',
+          sector: 'Engenharia',
         }),
       ).rejects.toThrow(message)
     })

@@ -3,7 +3,8 @@ import { CircleAlert, TriangleAlert } from '@lucide/vue'
 import { adminProfileOf, updateUserProfile } from '@/services/admin-users'
 import { SECTORS } from '@/types/AdminUser'
 import type { AdminUser } from '@/types/AdminUser'
-import { cpfDigits } from '@/utils/cpf'
+import { cpfDigits, cpfProblem } from '@/utils/cpf'
+import { confirmAction } from '@/utils/confirm'
 
 type Props = {
   user: AdminUser
@@ -31,12 +32,12 @@ const dirty = computed(
     cpfDigits(form.value.cpf) !== cpfDigits(original.cpf) ||
     form.value.sector !== original.sector,
 )
-const cpfInvalid = computed(() => cpfDigits(form.value.cpf).length !== 11)
+const cpfError = computed(() => cpfProblem(form.value.cpf))
 const canSave = computed(
   () =>
     dirty.value &&
     !saving.value &&
-    !cpfInvalid.value &&
+    !cpfError.value &&
     [form.value.firstName, form.value.lastName, form.value.email, form.value.sector].every(
       (field) => field.trim(),
     ),
@@ -48,6 +49,15 @@ const cancel = () => {
 
 const save = async () => {
   if (!canSave.value) return
+  const who = props.user.name || props.user.email
+  const confirmed = await confirmAction({
+    title: `Salvar os dados de ${who}?`,
+    text: emailChanged.value
+      ? 'O novo e-mail passa a ser o login da pessoa.'
+      : 'As mudanças chegam à pessoa na próxima renovação da sessão dela.',
+    confirmText: 'Salvar',
+  })
+  if (!confirmed) return
   saving.value = true
   error.value = null
   try {
@@ -94,7 +104,7 @@ onMounted(() => dialog.value?.querySelector('input')?.focus())
         <label class="form-field">
           <span class="text-label-small">CPF</span>
           <AkInput v-model="form.cpf" class="edit-cpf" placeholder="000.000.000-00" />
-          <span v-if="cpfInvalid" class="text-muted field-hint">O CPF deve ter 11 dígitos.</span>
+          <span v-if="cpfError" class="text-muted field-hint">{{ cpfError }}</span>
         </label>
         <label class="form-field">
           <span class="text-label-small">Setor</span>

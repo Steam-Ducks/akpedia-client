@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { AlertTriangle, CheckCircle2, Clock, Loader2, XCircle } from '@lucide/vue'
+import { AlertTriangle, Ban, CheckCircle2, Clock, Loader2, XCircle } from '@lucide/vue'
 import type { SubmissionStatus } from '@/types/Submission'
 
+/** A user account's status, on the admin's users screen. */
+export type AccountStatus = 'ACTIVE' | 'DISABLED'
+
 type Props = {
-  status: SubmissionStatus
+  status: SubmissionStatus | AccountStatus
 }
 
 const props = defineProps<Props>()
 
 const presentationByStatus: Record<
-  SubmissionStatus,
+  SubmissionStatus | AccountStatus,
   { label: string; icon: unknown; tone: 'muted' | 'primary' | 'alert' }
 > = {
   UNDER_REVIEW: { label: 'Em análise', icon: Clock, tone: 'muted' },
@@ -18,6 +21,8 @@ const presentationByStatus: Record<
   PUBLISHED: { label: 'Publicado', icon: CheckCircle2, tone: 'primary' },
   INDEXING_FAILED: { label: 'Falha na indexação', icon: AlertTriangle, tone: 'alert' },
   RETURNED: { label: 'Devolvido', icon: XCircle, tone: 'alert' },
+  ACTIVE: { label: 'Ativo', icon: CheckCircle2, tone: 'primary' },
+  DISABLED: { label: 'Desativado', icon: Ban, tone: 'muted' },
 }
 
 const presentation = computed(() => presentationByStatus[props.status])

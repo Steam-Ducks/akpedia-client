@@ -2,7 +2,7 @@
 import { CircleAlert, Send } from '@lucide/vue'
 import { createChangeRequest } from '@/services/profile'
 import type { ChangeRequest, RequestableProfileField } from '@/types/Profile'
-import { cpfDigits, formatCpf } from '@/utils/cpf'
+import { cpfProblem, formatCpf } from '@/utils/cpf'
 
 type Props = {
   field: RequestableProfileField
@@ -31,7 +31,7 @@ const current = computed(() =>
 const valueHint = computed(() => {
   const value = newValue.value.trim()
   if (!value) return null
-  if (isCpf.value && cpfDigits(value).length !== 11) return 'O CPF deve ter 11 dígitos.'
+  if (isCpf.value) return cpfProblem(value)
   if (!isCpf.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Informe um e-mail válido.'
   return null
 })

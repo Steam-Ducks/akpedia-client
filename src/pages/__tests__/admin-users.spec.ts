@@ -94,8 +94,8 @@ const adminUser = (overrides: Partial<AdminUser> = {}): AdminUser => ({
   id: 'kc-ana',
   name: 'Ana Souza',
   email: 'ana@akpedia.local',
-  sector: 'Setor 1',
-  cpf: '12345678901',
+  sector: 'Engenharia',
+  cpf: '12345678909',
   firstName: 'Ana',
   lastName: 'Souza',
   enabled: true,
@@ -112,8 +112,8 @@ const bruno = adminUser({
   firstName: 'Bruno',
   lastName: 'Lima',
   email: 'bruno@akpedia.local',
-  sector: 'Setor 2',
-  cpf: '123.456.789-01',
+  sector: 'Qualidade',
+  cpf: '123.456.789-09',
   roles: ['STANDARD', 'APPROVER'],
   termsAcceptedVersion: '2.0',
 })
@@ -155,6 +155,7 @@ describe('admin users page', () => {
     }
     vi.mocked(fetchRoles).mockResolvedValue(roles)
     vi.mocked(fetchAdminUsers).mockResolvedValue(pageOf([bruno, admin]))
+    vi.mocked(confirmAction).mockResolvedValue(true)
     vi.mocked(fetchProfileRequests).mockResolvedValue({
       content: [],
       page: 0,
@@ -172,7 +173,13 @@ describe('admin users page', () => {
   it('lists the users with roles, terms and status', async () => {
     const wrapper = await mountPage()
 
-    expect(fetchAdminUsers).toHaveBeenCalledWith({ search: '', page: 0, size: 20 })
+    expect(fetchAdminUsers).toHaveBeenCalledWith({
+      search: '',
+      sector: '',
+      role: '',
+      page: 0,
+      size: 20,
+    })
     const brunoRow = row(wrapper, 'kc-bruno').text()
     expect(brunoRow).toContain('Bruno Lima')
     expect(brunoRow).toContain('bruno@akpedia.local')
@@ -216,9 +223,50 @@ describe('admin users page', () => {
     await editor.trigger('submit')
     await flushPromises()
 
+    expect(confirmAction).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Alterar os papéis de Bruno Lima?' }),
+    )
     expect(updateUserRoles).toHaveBeenCalledWith('kc-bruno', ['ADMIN'])
     expect(row(wrapper, 'kc-bruno').text()).toContain('Administrador')
     expect(wrapper.text()).toContain('próximo login')
+  })
+
+  it('keeps the roles when the confirmation is cancelled', async () => {
+    vi.mocked(confirmAction).mockResolvedValue(false)
+    const wrapper = await mountPage()
+
+    await row(wrapper, 'kc-bruno').get('.edit-roles').trigger('click')
+    await wrapper.get('input[name="ADMIN"]').setValue(true)
+    await wrapper.get('.roles-editor').trigger('submit')
+    await flushPromises()
+
+    expect(updateUserRoles).not.toHaveBeenCalled()
+    expect(wrapper.find('.roles-editor').exists()).toBe(true)
+  })
+
+  it('filters by sector and by role, from the first page', async () => {
+    const wrapper = await mountPage()
+    vi.mocked(fetchAdminUsers).mockClear()
+
+    await wrapper.get('.filter-sector select').setValue('Financeiro')
+    await flushPromises()
+    expect(fetchAdminUsers).toHaveBeenLastCalledWith({
+      search: '',
+      sector: 'Financeiro',
+      role: '',
+      page: 0,
+      size: 20,
+    })
+
+    await wrapper.get('.filter-role select').setValue('APPROVER')
+    await flushPromises()
+    expect(fetchAdminUsers).toHaveBeenLastCalledWith({
+      search: '',
+      sector: 'Financeiro',
+      role: 'APPROVER',
+      page: 0,
+      size: 20,
+    })
   })
 
   it("locks one's own admin role and status", async () => {
@@ -279,7 +327,13 @@ describe('admin users page', () => {
     await vi.advanceTimersByTimeAsync(300)
 
     expect(fetchAdminUsers).toHaveBeenCalledTimes(1)
-    expect(fetchAdminUsers).toHaveBeenCalledWith({ search: 'bru', page: 0, size: 20 })
+    expect(fetchAdminUsers).toHaveBeenCalledWith({
+      search: 'bru',
+      sector: '',
+      role: '',
+      page: 0,
+      size: 20,
+    })
   })
 
   it('pages through the users', async () => {
@@ -289,7 +343,13 @@ describe('admin users page', () => {
     await wrapper.findAll('.ak-paginator button')[1].trigger('click')
     await flushPromises()
 
-    expect(fetchAdminUsers).toHaveBeenLastCalledWith({ search: '', page: 1, size: 20 })
+    expect(fetchAdminUsers).toHaveBeenLastCalledWith({
+      search: '',
+      sector: '',
+      role: '',
+      page: 1,
+      size: 20,
+    })
   })
 
   it('reports a failed load', async () => {
@@ -299,13 +359,13 @@ describe('admin users page', () => {
   })
 
   describe('Novo usuário', () => {
-    const fill = async (wrapper: Awaited<ReturnType<typeof mountPage>>, cpf = '123.456.789-01') => {
+    const fill = async (wrapper: Awaited<ReturnType<typeof mountPage>>, cpf = '123.456.789-09') => {
       await wrapper.get('.new-first-name input').setValue('Carla')
       await wrapper.get('.new-last-name input').setValue('Dias')
       await wrapper.get('.new-email input').setValue('carla@akpedia.local')
       await wrapper.get('.new-password input').setValue('segredo')
       await wrapper.get('.new-cpf input').setValue(cpf)
-      await wrapper.get('.new-sector select').setValue('Setor 4')
+      await wrapper.get('.new-sector select').setValue('Manutenção')
     }
 
     const openForm = async () => {
@@ -322,13 +382,13 @@ describe('admin users page', () => {
       const sectors = form.findAll('.new-sector option').map((option) => option.text())
       expect(sectors).toEqual([
         'Escolha o setor',
-        'Setor 1',
-        'Setor 2',
-        'Setor 3',
-        'Setor 4',
-        'Setor 5',
-        'Setor 6',
-        'Setor 7',
+        'Engenharia',
+        'Qualidade',
+        'Logística',
+        'Manutenção',
+        'Recursos Humanos',
+        'Financeiro',
+        'Jurídico',
       ])
       expect(form.find('input[name="APPROVER"]').exists()).toBe(true)
       expect(form.find('input[name="ADMIN"]').exists()).toBe(true)
@@ -343,6 +403,10 @@ describe('admin users page', () => {
       expect(wrapper.get('.create-user').attributes('disabled')).toBeDefined()
 
       await wrapper.get('.new-cpf input').setValue('12345678901')
+      expect(wrapper.text()).toContain('CPF inválido: confira os dígitos.')
+      expect(wrapper.get('.create-user').attributes('disabled')).toBeDefined()
+
+      await wrapper.get('.new-cpf input').setValue('12345678909')
       expect(wrapper.get('.create-user').attributes('disabled')).toBeUndefined()
     })
 
@@ -362,8 +426,8 @@ describe('admin users page', () => {
         lastName: 'Dias',
         email: 'carla@akpedia.local',
         password: 'segredo',
-        cpf: '123.456.789-01',
-        sector: 'Setor 4',
+        cpf: '123.456.789-09',
+        sector: 'Manutenção',
         roles: ['APPROVER'],
       })
       expect(wrapper.find('form.create-card').exists()).toBe(false)
@@ -538,7 +602,7 @@ describe('admin users page', () => {
         'bruno@akpedia.local',
       )
       expect((dialog.get('.edit-cpf input').element as HTMLInputElement).value).toBe(
-        '123.456.789-01',
+        '123.456.789-09',
       )
       expect(dialog.get('.edit-save').attributes('disabled')).toBeDefined()
     })
@@ -559,8 +623,8 @@ describe('admin users page', () => {
         firstName: 'Bruno',
         lastName: 'Lima',
         email: 'bruno.lima@akpedia.local',
-        cpf: '123.456.789-01',
-        sector: 'Setor 2',
+        cpf: '123.456.789-09',
+        sector: 'Qualidade',
       })
       expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
       expect(row(wrapper, 'kc-bruno').text()).toContain('bruno.lima@akpedia.local')
