@@ -95,7 +95,7 @@ describe('AkCpfProblemModal', () => {
 
   it('checks again with a new token once the request was approved', async () => {
     vi.mocked(fetchMyChangeRequests).mockResolvedValue([request('APPROVED')])
-    vi.mocked(fetchAccountStatus).mockResolvedValue({ cpfProblem: null })
+    vi.mocked(fetchAccountStatus).mockResolvedValue({ termsPending: false, cpfProblem: null })
 
     await mountModal()
 

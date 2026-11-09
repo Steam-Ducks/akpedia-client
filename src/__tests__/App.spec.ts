@@ -3,12 +3,12 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import App from '../App.vue'
 import { fetchAccountStatus } from '@/services/account'
-import { onCpfRefused, onTermsNotAccepted } from '@/services/api'
+import { onCpfRefused, onTermsPending } from '@/services/api'
 import { fetchMyChangeRequests } from '@/services/profile'
 import { acceptTerms, fetchTerms } from '@/services/terms'
 import type { TermsVersion } from '@/types/Terms'
 
-vi.mock('@/services/api', () => ({ onTermsNotAccepted: vi.fn(), onCpfRefused: vi.fn() }))
+vi.mock('@/services/api', () => ({ onTermsPending: vi.fn(), onCpfRefused: vi.fn() }))
 vi.mock('@/services/auth', () => ({ logout: vi.fn(), refreshSession: vi.fn() }))
 vi.mock('@/services/account', () => ({ fetchAccountStatus: vi.fn(), deleteMyAccount: vi.fn() }))
 vi.mock('@/services/profile', () => ({
@@ -50,7 +50,7 @@ describe('App', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     document.body.innerHTML = ''
-    vi.mocked(fetchAccountStatus).mockResolvedValue({ cpfProblem: null })
+    vi.mocked(fetchAccountStatus).mockResolvedValue({ termsPending: false, cpfProblem: null })
     vi.mocked(fetchMyChangeRequests).mockResolvedValue([])
   })
 
@@ -113,7 +113,7 @@ describe('App', () => {
     wrapper.unmount()
   })
 
-  it('brings the dialog back when the API answers terms_not_accepted', async () => {
+  it('brings the dialog back when the API answers terms_pending', async () => {
     vi.mocked(fetchTerms).mockResolvedValueOnce({
       current: version('1.0'),
       accepted: { version: '1.0', acceptedAt: new Date() },
@@ -125,7 +125,7 @@ describe('App', () => {
       current: version('2.0'),
       accepted: { version: '1.0', acceptedAt: new Date() },
     })
-    const callback = vi.mocked(onTermsNotAccepted).mock.calls[0][0]
+    const callback = vi.mocked(onTermsPending).mock.calls[0][0]
     callback?.()
     await flushPromises()
 
@@ -141,7 +141,7 @@ describe('App', () => {
       current: version('1.0'),
       accepted: { version: '1.0', acceptedAt: new Date() },
     })
-    vi.mocked(fetchAccountStatus).mockResolvedValue({ cpfProblem: 'invalid_cpf' })
+    vi.mocked(fetchAccountStatus).mockResolvedValue({ termsPending: false, cpfProblem: 'invalid_cpf' })
 
     const wrapper = await mountApp()
 
@@ -154,7 +154,7 @@ describe('App', () => {
   it('asks for the terms first, then for the CPF', async () => {
     vi.mocked(fetchTerms).mockResolvedValue({ current: version('2.0'), accepted: null })
     vi.mocked(acceptTerms).mockResolvedValue({ version: '2.0', acceptedAt: new Date() })
-    vi.mocked(fetchAccountStatus).mockResolvedValue({ cpfProblem: 'cpf_taken' })
+    vi.mocked(fetchAccountStatus).mockResolvedValue({ termsPending: false, cpfProblem: 'cpf_taken' })
     const wrapper = await mountApp()
     expect(wrapper.find('.terms-accept').exists()).toBe(true)
 

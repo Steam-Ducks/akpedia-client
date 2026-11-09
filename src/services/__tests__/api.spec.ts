@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { apiFetch, onCpfRefused, onTermsNotAccepted } from '../api'
+import { apiFetch, onCpfRefused, onTermsPending } from '../api'
 import { accessToken, loginAgain } from '../auth'
 
 vi.mock('../auth', () => ({
@@ -11,7 +11,7 @@ describe('apiFetch', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.clearAllMocks()
-    onTermsNotAccepted(null)
+    onTermsPending(null)
     onCpfRefused(null)
   })
 
@@ -70,10 +70,10 @@ describe('apiFetch', () => {
 
   it('reports terms not accepted, leaving the body readable to the caller', async () => {
     vi.mocked(accessToken).mockResolvedValue('abc')
-    const body = { code: 'terms_not_accepted', message: 'Aceite os termos de uso.' }
+    const body = { code: 'terms_pending', message: 'Aceite os termos de uso.' }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(forbidden(body)))
     const callback = vi.fn()
-    onTermsNotAccepted(callback)
+    onTermsPending(callback)
 
     const response = await apiFetch('/api/v1/documents')
 
@@ -85,7 +85,7 @@ describe('apiFetch', () => {
     vi.mocked(accessToken).mockResolvedValue('abc')
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(forbidden({ code: 'forbidden' })))
     const callback = vi.fn()
-    onTermsNotAccepted(callback)
+    onTermsPending(callback)
 
     await apiFetch('/api/v1/documents/pending')
 

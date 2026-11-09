@@ -14,7 +14,10 @@ describe('cpf store', () => {
   })
 
   it('takes the problem from the account status', async () => {
-    vi.mocked(fetchAccountStatus).mockResolvedValue({ cpfProblem: 'invalid_cpf' })
+    vi.mocked(fetchAccountStatus).mockResolvedValue({
+      termsPending: false,
+      cpfProblem: 'invalid_cpf',
+    })
     const store = useCpfStore()
 
     await store.check()
@@ -34,7 +37,7 @@ describe('cpf store', () => {
   })
 
   it('checks again with a renewed token, clearing the problem once the CPF is fixed', async () => {
-    vi.mocked(fetchAccountStatus).mockResolvedValue({ cpfProblem: null })
+    vi.mocked(fetchAccountStatus).mockResolvedValue({ termsPending: false, cpfProblem: null })
     const store = useCpfStore()
     store.refused('invalid_cpf')
 

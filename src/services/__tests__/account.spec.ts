@@ -39,19 +39,23 @@ describe('account service', () => {
     await expect(deleteMyAccount()).rejects.toThrow('(HTTP 500)')
   })
 
-  it('reads the refused CPF from GET /me, null when there is none', async () => {
+  it('reads from GET /me whether the terms are pending and the refused CPF', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ cpf_problem: 'cpf_taken' }),
+        json: async () => ({ terms_pending: true, cpf_problem: 'cpf_taken' }),
       })
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ cpf_problem: null }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ terms_pending: false, cpf_problem: null }),
+      })
     vi.stubGlobal('fetch', fetchMock)
 
-    expect(await fetchAccountStatus()).toEqual({ cpfProblem: 'cpf_taken' })
-    expect(await fetchAccountStatus()).toEqual({ cpfProblem: null })
+    expect(await fetchAccountStatus()).toEqual({ termsPending: true, cpfProblem: 'cpf_taken' })
+    expect(await fetchAccountStatus()).toEqual({ termsPending: false, cpfProblem: null })
     expect(fetchMock.mock.calls[0][0]).toMatch(/\/api\/v1\/me$/)
   })
 })

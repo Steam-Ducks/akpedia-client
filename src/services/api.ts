@@ -6,15 +6,15 @@ export type CpfRefusal = 'invalid_cpf' | 'cpf_taken'
 
 const CPF_REFUSALS: readonly string[] = ['invalid_cpf', 'cpf_taken'] satisfies CpfRefusal[]
 
-let termsNotAccepted: (() => void) | null = null
+let termsPending: (() => void) | null = null
 let cpfRefused: ((code: CpfRefusal) => void) | null = null
 
 /**
  * Called whenever the server refuses a call because the current terms of use were not accepted,
  * e.g. when an admin publishes a new version while the user is in the app.
  */
-export function onTermsNotAccepted(callback: (() => void) | null): void {
-  termsNotAccepted = callback
+export function onTermsPending(callback: (() => void) | null): void {
+  termsPending = callback
 }
 
 /**
@@ -42,8 +42,8 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers })
   if (response.status === 401) loginAgain()
-  if (response.status === 403 && termsNotAccepted) {
-    if ((await errorCode(response)) === 'terms_not_accepted') termsNotAccepted()
+  if (response.status === 403 && termsPending) {
+    if ((await errorCode(response)) === 'terms_pending') termsPending()
   }
   if (response.status === 422 && cpfRefused) {
     const code = await errorCode(response)

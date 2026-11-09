@@ -28,6 +28,8 @@ export async function deleteMyAccount(): Promise<void> {
 
 /** What `GET /api/v1/me` says about the account that the app needs before showing any page. */
 export type AccountStatus = {
+  /** The current terms of use still have to be accepted before the rest of the API answers. */
+  termsPending: boolean
   /** Why the CPF on the account was refused; `null` when it was not. */
   cpfProblem: CpfRefusal | null
 }
@@ -38,6 +40,9 @@ export async function fetchAccountStatus(): Promise<AccountStatus> {
   if (!response.ok) {
     throw new Error(`Não foi possível carregar a sua conta (HTTP ${response.status}).`)
   }
-  const me = (await response.json()) as { cpf_problem?: CpfRefusal | null }
-  return { cpfProblem: me.cpf_problem ?? null }
+  const me = (await response.json()) as {
+    terms_pending?: boolean
+    cpf_problem?: CpfRefusal | null
+  }
+  return { termsPending: me.terms_pending === true, cpfProblem: me.cpf_problem ?? null }
 }

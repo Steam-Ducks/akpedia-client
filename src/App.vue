@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { onCpfRefused, onTermsNotAccepted } from '@/services/api'
+import { onCpfRefused, onTermsPending } from '@/services/api'
 import { useCpfStore } from '@/stores/cpf-store'
 import { useTermsStore } from '@/stores/terms-store'
 
@@ -15,7 +15,7 @@ const blocked = computed(() => pending.value || cpfProblem.value !== null)
 onMounted(() => {
   // New terms published while the user is in the app: the server starts refusing every call,
   // and the terms dialog comes back.
-  onTermsNotAccepted(() => termsStore.load())
+  onTermsPending(() => termsStore.load())
   // A CPF the server refuses (invalid, or another user's): the CPF dialog comes up.
   onCpfRefused((code) => cpfStore.refused(code))
   termsStore.load()
@@ -23,7 +23,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  onTermsNotAccepted(null)
+  onTermsPending(null)
   onCpfRefused(null)
 })
 </script>
@@ -32,7 +32,7 @@ onBeforeUnmount(() => {
   <!--
     Nothing opens before the terms status is known. While the current terms still have to be
     accepted, the layout stays behind the dialog, dimmed and inert, without the page itself: a page
-    would load its data, get 403 terms_not_accepted and bring the dialog up again. The same while
+    would load its data, get 403 terms_pending and bring the dialog up again. The same while
     the server refuses the user's CPF (422 invalid_cpf or cpf_taken), behind the CPF dialog.
   -->
   <template v-if="status === 'done'">
