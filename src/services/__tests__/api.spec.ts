@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { apiFetch, onTermsNotAccepted } from '../api'
+import { apiFetch, onCpfRefused, onTermsNotAccepted } from '../api'
 import { accessToken, loginAgain } from '../auth'
 
 vi.mock('../auth', () => ({
@@ -12,6 +12,7 @@ describe('apiFetch', () => {
     vi.unstubAllGlobals()
     vi.clearAllMocks()
     onTermsNotAccepted(null)
+    onCpfRefused(null)
   })
 
   it('sends the access token, keeping the other headers', async () => {
@@ -87,6 +88,40 @@ describe('apiFetch', () => {
     onTermsNotAccepted(callback)
 
     await apiFetch('/api/v1/documents/pending')
+
+    expect(callback).not.toHaveBeenCalled()
+  })
+
+  const unprocessable = (body: unknown) => ({
+    ok: false,
+    status: 422,
+    json: async () => body,
+    clone: () => ({ json: async () => body }),
+  })
+
+  it('reports a refused CPF with its code, leaving the body readable to the caller', async () => {
+    vi.mocked(accessToken).mockResolvedValue('abc')
+    const body = { code: 'cpf_taken', message: 'O CPF da sua conta já pertence a outro usuário.' }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(unprocessable(body)))
+    const callback = vi.fn()
+    onCpfRefused(callback)
+
+    const response = await apiFetch('/api/v1/documents')
+
+    expect(callback).toHaveBeenCalledWith('cpf_taken')
+    expect(await response.json()).toEqual(body)
+  })
+
+  it('does not report the CPF on any other 422', async () => {
+    vi.mocked(accessToken).mockResolvedValue('abc')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(unprocessable({ code: 'pdf_conversion_rejected' })),
+    )
+    const callback = vi.fn()
+    onCpfRefused(callback)
+
+    await apiFetch('/api/v1/documents')
 
     expect(callback).not.toHaveBeenCalled()
   })

@@ -2,12 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import App from '../App.vue'
-import { onTermsNotAccepted } from '@/services/api'
+import { fetchAccountStatus } from '@/services/account'
+import { onCpfRefused, onTermsNotAccepted } from '@/services/api'
+import { fetchMyChangeRequests } from '@/services/profile'
 import { acceptTerms, fetchTerms } from '@/services/terms'
 import type { TermsVersion } from '@/types/Terms'
 
-vi.mock('@/services/api', () => ({ onTermsNotAccepted: vi.fn() }))
-vi.mock('@/services/auth', () => ({ logout: vi.fn() }))
+vi.mock('@/services/api', () => ({ onTermsNotAccepted: vi.fn(), onCpfRefused: vi.fn() }))
+vi.mock('@/services/auth', () => ({ logout: vi.fn(), refreshSession: vi.fn() }))
+vi.mock('@/services/account', () => ({ fetchAccountStatus: vi.fn(), deleteMyAccount: vi.fn() }))
+vi.mock('@/services/profile', () => ({
+  fetchMyChangeRequests: vi.fn(),
+  createChangeRequest: vi.fn(),
+}))
 vi.mock('@/services/terms', () => ({
   fetchTerms: vi.fn(),
   acceptTerms: vi.fn(),
@@ -43,6 +50,8 @@ describe('App', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     document.body.innerHTML = ''
+    vi.mocked(fetchAccountStatus).mockResolvedValue({ cpfProblem: null })
+    vi.mocked(fetchMyChangeRequests).mockResolvedValue([])
   })
 
   it('renders nothing before the terms status is known', () => {
@@ -123,6 +132,53 @@ describe('App', () => {
     expect(wrapper.get('[role="dialog"]').text()).toContain(
       'Você aceitou a versão 1.0; os termos mudaram.',
     )
+    expect(wrapper.find('.page-stub').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('shows the CPF dialog, without the page, when the server refuses the CPF', async () => {
+    vi.mocked(fetchTerms).mockResolvedValue({
+      current: version('1.0'),
+      accepted: { version: '1.0', acceptedAt: new Date() },
+    })
+    vi.mocked(fetchAccountStatus).mockResolvedValue({ cpfProblem: 'invalid_cpf' })
+
+    const wrapper = await mountApp()
+
+    expect(wrapper.get('.akpedia-page').attributes('inert')).toBeDefined()
+    expect(wrapper.find('.page-stub').exists()).toBe(false)
+    expect(wrapper.get('[role="dialog"]').text()).toContain('Seu CPF precisa ser corrigido')
+    wrapper.unmount()
+  })
+
+  it('asks for the terms first, then for the CPF', async () => {
+    vi.mocked(fetchTerms).mockResolvedValue({ current: version('2.0'), accepted: null })
+    vi.mocked(acceptTerms).mockResolvedValue({ version: '2.0', acceptedAt: new Date() })
+    vi.mocked(fetchAccountStatus).mockResolvedValue({ cpfProblem: 'cpf_taken' })
+    const wrapper = await mountApp()
+    expect(wrapper.find('.terms-accept').exists()).toBe(true)
+
+    await wrapper.get('.terms-agree-box').setValue(true)
+    await wrapper.get('.terms-accept').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[role="dialog"]').text()).toContain('já pertence a outro usuário')
+    expect(wrapper.find('.page-stub').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('brings the CPF dialog up when the API refuses the CPF', async () => {
+    vi.mocked(fetchTerms).mockResolvedValue({
+      current: version('1.0'),
+      accepted: { version: '1.0', acceptedAt: new Date() },
+    })
+    const wrapper = await mountApp()
+    expect(wrapper.find('.page-stub').exists()).toBe(true)
+
+    vi.mocked(onCpfRefused).mock.calls[0][0]?.('invalid_cpf')
+    await flushPromises()
+
+    expect(wrapper.get('[role="dialog"]').text()).toContain('Seu CPF precisa ser corrigido')
     expect(wrapper.find('.page-stub').exists()).toBe(false)
     wrapper.unmount()
   })

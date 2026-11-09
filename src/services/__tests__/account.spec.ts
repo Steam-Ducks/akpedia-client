@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { deleteMyAccount } from '../account'
+import { deleteMyAccount, fetchAccountStatus } from '../account'
 
 describe('account service', () => {
   afterEach(() => {
@@ -37,5 +37,21 @@ describe('account service', () => {
     )
 
     await expect(deleteMyAccount()).rejects.toThrow('(HTTP 500)')
+  })
+
+  it('reads the refused CPF from GET /me, null when there is none', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ cpf_problem: 'cpf_taken' }),
+      })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ cpf_problem: null }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await fetchAccountStatus()).toEqual({ cpfProblem: 'cpf_taken' })
+    expect(await fetchAccountStatus()).toEqual({ cpfProblem: null })
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/api\/v1\/me$/)
   })
 })

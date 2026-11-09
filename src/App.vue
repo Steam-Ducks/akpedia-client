@@ -1,42 +1,56 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { onTermsNotAccepted } from '@/services/api'
+import { onCpfRefused, onTermsNotAccepted } from '@/services/api'
+import { useCpfStore } from '@/stores/cpf-store'
 import { useTermsStore } from '@/stores/terms-store'
 
 const termsStore = useTermsStore()
 const { status, pending, error } = storeToRefs(termsStore)
+const cpfStore = useCpfStore()
+const { problem: cpfProblem } = storeToRefs(cpfStore)
+
+/** The app waits behind a dialog: terms to accept first, then a CPF the server refuses. */
+const blocked = computed(() => pending.value || cpfProblem.value !== null)
 
 onMounted(() => {
   // New terms published while the user is in the app: the server starts refusing every call,
   // and the terms dialog comes back.
   onTermsNotAccepted(() => termsStore.load())
+  // A CPF the server refuses (invalid, or another user's): the CPF dialog comes up.
+  onCpfRefused((code) => cpfStore.refused(code))
   termsStore.load()
+  cpfStore.check()
 })
 
-onBeforeUnmount(() => onTermsNotAccepted(null))
+onBeforeUnmount(() => {
+  onTermsNotAccepted(null)
+  onCpfRefused(null)
+})
 </script>
 
 <template>
   <!--
     Nothing opens before the terms status is known. While the current terms still have to be
     accepted, the layout stays behind the dialog, dimmed and inert, without the page itself: a page
-    would load its data, get 403 terms_not_accepted and bring the dialog up again.
+    would load its data, get 403 terms_not_accepted and bring the dialog up again. The same while
+    the server refuses the user's CPF (422 invalid_cpf or cpf_taken), behind the CPF dialog.
   -->
   <template v-if="status === 'done'">
     <div
       class="akpedia-page"
-      :inert="pending || undefined"
-      :aria-hidden="pending ? 'true' : undefined"
+      :inert="blocked || undefined"
+      :aria-hidden="blocked ? 'true' : undefined"
     >
       <AkSidebar />
       <div class="main-section">
         <AkHeader />
         <div class="main-content">
-          <RouterView v-if="!pending" />
+          <RouterView v-if="!blocked" />
         </div>
       </div>
     </div>
     <AkTermsModal v-if="pending" />
+    <AkCpfProblemModal v-else-if="cpfProblem" />
   </template>
   <div v-else-if="status === 'error'" class="app-message">
     <span class="text-muted">{{ error }}</span>
