@@ -42,14 +42,19 @@ defineProps<Props>()
   position: absolute;
 }
 
-.ak-button:hover {
+.ak-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ak-button:hover:not(:disabled) {
   background-color: rgba(from var(--color-black) r g b / 0.7);
 }
 .ak-button.primary {
   background-color: var(--color-primary);
 }
 
-.ak-button.primary:hover {
+.ak-button.primary:hover:not(:disabled) {
   background-color: rgba(from var(--color-primary) r g b / 0.85);
 }
 
@@ -57,7 +62,7 @@ defineProps<Props>()
   background-color: var(--color-wine);
 }
 
-.ak-button.danger:hover {
+.ak-button.danger:hover:not(:disabled) {
   background-color: rgba(from var(--color-wine) r g b / 0.85);
 }
 </style>
