@@ -17,12 +17,20 @@ const { problem: cpfProblem } = storeToRefs(cpfStore)
 
 const onTermsPage = computed(() => route.path === ACCEPT_TERMS_PATH)
 
+// The router's first navigation, to the address the user opened, may still be loading its page
+// when GET /me answers. Until it lands, the route is the home page: sending the user to the terms
+// page from there would cancel it and bring them back home after accepting.
+const routerReady = ref(false)
+router.isReady().then(() => {
+  routerReady.value = true
+})
+
 // Terms just found pending (GET /me, or a call refused because a new version was published while
 // the user is in the app): to the terms page. Just accepted: back to where the user was.
 watch(
-  [status, termsPending, () => route.fullPath],
+  [status, termsPending, () => route.fullPath, routerReady],
   () => {
-    if (status.value !== 'done') return
+    if (status.value !== 'done' || !routerReady.value) return
     const target = termsRedirect(route, termsPending.value)
     if (target) router.replace(target)
   },

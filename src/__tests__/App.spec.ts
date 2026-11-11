@@ -91,6 +91,38 @@ describe('App', () => {
     wrapper.unmount()
   })
 
+  it('keeps the address the user opened when GET /me answers before its page loaded', async () => {
+    vi.mocked(fetchAccountStatus).mockResolvedValue(account({ termsPending: true }))
+    let loadPage!: () => void
+    // The address the user opened, as the browser's URL: installing the router navigates to it.
+    const history = createMemoryHistory()
+    history.replace('/review?page=2')
+    router = createRouter({
+      history,
+      routes: [
+        { path: '/', component: { template: '<div class="page-stub home" />' } },
+        {
+          path: '/review',
+          component: () =>
+            new Promise((resolve) => {
+              loadPage = () => resolve({ template: '<div class="page-stub review" />' })
+            }),
+        },
+        { path: '/accept-terms', component: { template: '<main class="terms-page-stub" />' } },
+      ],
+    })
+    // The first navigation is still loading the page when GET /me answers.
+    const wrapper = mount(App, { attachTo: document.body, global: { plugins: [router] } })
+    await flushPromises()
+
+    loadPage()
+    await router.isReady()
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/accept-terms?from=/review?page=2')
+    wrapper.unmount()
+  })
+
   it('goes back to the page the user opened once the terms are accepted', async () => {
     vi.mocked(fetchAccountStatus).mockResolvedValue(account({ termsPending: true }))
     const wrapper = await mountApp('/review')
