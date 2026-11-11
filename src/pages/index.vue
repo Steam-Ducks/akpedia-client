@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useResultStore } from '@/stores/result-store'
+import { sessionUser } from '@/services/auth'
 
-const userName = 'Camila'
+const userName = computed(() => sessionUser.value?.name.split(' ')[0] ?? '')
 const empresaName = 'Akaer'
 
 const route = useRoute('/')

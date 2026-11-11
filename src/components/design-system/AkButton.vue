@@ -1,14 +1,17 @@
 <script lang="ts" setup>
 type Props = {
   icon?: boolean
-  color?: 'default' | 'primary'
+  color?: 'default' | 'primary' | 'danger'
 }
 
 defineProps<Props>()
 </script>
 
 <template>
-  <button class="ak-button" :class="{ icon: icon, primary: color === 'primary' }">
+  <button
+    class="ak-button"
+    :class="{ icon: icon, primary: color === 'primary', danger: color === 'danger' }"
+  >
     <slot />
   </button>
 </template>
@@ -39,14 +42,27 @@ defineProps<Props>()
   position: absolute;
 }
 
-.ak-button:hover {
+.ak-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ak-button:hover:not(:disabled) {
   background-color: rgba(from var(--color-black) r g b / 0.7);
 }
 .ak-button.primary {
   background-color: var(--color-primary);
 }
 
-.ak-button.primary:hover {
+.ak-button.primary:hover:not(:disabled) {
   background-color: rgba(from var(--color-primary) r g b / 0.85);
+}
+
+.ak-button.danger {
+  background-color: var(--color-wine);
+}
+
+.ak-button.danger:hover:not(:disabled) {
+  background-color: rgba(from var(--color-wine) r g b / 0.85);
 }
 </style>

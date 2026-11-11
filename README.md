@@ -56,6 +56,8 @@ akpedia-client/
     ├── main.ts # bootstrap da aplicação Vue
     ├── App.vue # componente raiz
     ├── config/api.ts # base URL do akpedia-server (VITE_API_BASE_URL)
+    ├── services/auth.ts # login no Keycloak e dados do usuário logado
+    ├── services/api.ts # fetch para a API com o token do usuário
     └── components/
         ├── HealthStatus.vue # verifica a conexão com o backend
         └── __tests__/ # testes (Vitest)
@@ -67,11 +69,49 @@ akpedia-client/
 
 A aplicação lê a URL do backend a partir de variável de ambiente (com default para dev):
 
-| Variável            | Default                 | Descrição                           |
-| ------------------- | ----------------------- | ----------------------------------- |
-| `VITE_API_BASE_URL` | `http://localhost:8080` | URL base da API do `akpedia-server` |
+| Variável                  | Default                 | Descrição                           |
+| ------------------------- | ----------------------- | ----------------------------------- |
+| `VITE_API_BASE_URL`       | `http://localhost:8080` | URL base da API do `akpedia-server` |
+| `VITE_KEYCLOAK_URL`       | `<origem do app>/auth`  | Keycloak onde o usuário faz login   |
+| `VITE_KEYCLOAK_REALM`     | `akpedia`               | Realm do Keycloak                   |
+| `VITE_KEYCLOAK_CLIENT_ID` | `akpedia-client`        | Client público do realm             |
 
 > Variáveis `VITE_*` são resolvidas em **tempo de build**, ao usar Docker, ela é passada como build arg no `docker-compose.yml`.
+
+---
+
+## Login
+
+A aplicação só abre com o usuário logado. Ao entrar, o navegador vai para a tela de login do
+Keycloak (client `akpedia-client`, com PKCE) e volta logado; o Keycloak e os usuários de teste
+estão no README do `akpedia-server`.
+
+- Toda chamada à API leva o token do usuário (`src/services/api.ts`), renovado antes de expirar.
+  Se o servidor recusar o token (401), o navegador volta para o login.
+- O nome, o e-mail e o setor aparecem no menu do avatar, no cabeçalho, com o botão **Sair**,
+  que encerra a sessão também no Keycloak.
+- Cada página declara os papéis que a abrem, com `definePage({ meta: { roles } })`: `/review`
+  para `APPROVER` e `ADMIN`, `/admin/*` só para `ADMIN`. O menu mostra só o que o papel usa, e
+  quem abre uma página dessas pela URL sem o papel vai para `/no-permission`, que explica o
+  motivo (`src/route-access.ts`). O servidor recusa essas rotas de qualquer forma.
+- **Termos de uso**: depois do login, o app lê `terms_pending` em `GET /api/v1/me` (a mesma
+  chamada que traz o problema de CPF). Quem ainda não aceitou a versão atual vai para a página
+  `/accept-terms`, sem menu nem cabeçalho, antes de qualquer outra, guardando em `from` o
+  endereço que abriu. **Aceitar** só fica disponível depois de marcar que leu e aceita a versão,
+  e leva de volta a esse endereço; não aceitar exclui a conta. Enquanto não houver aceite, o
+  servidor recusa as outras chamadas (403 `terms_pending`), e se uma versão nova for publicada
+  com o usuário no app, ele volta para a página de termos. Os administradores (`ADMIN`)
+  publicam as versões em **Administração › Termos de uso** (`/admin/terms`), partindo do texto
+  da versão atual; cada publicação vira uma nova versão que todos, o admin incluído, precisam
+  aceitar. Enquanto nenhuma versão for publicada, ninguém precisa aceitar nada.
+- **Administração › Usuários** (`/admin/users`): busca por nome ou e-mail, filtros por setor e
+  por papel, e status com o `AkStatusChip`. Salvar papéis, salvar os dados de alguém e
+  desativar ou reativar pedem confirmação, e o erro do servidor aparece na tela (por exemplo,
+  `last_admin` ao desativar o único administrador ativo, ou `cpf_taken`).
+- **Administração › Permissões** (`/admin/permissions`): a grade de setores por categorias, com
+  uma caixa por célula, salva por setor. Vale a partir da próxima busca.
+- O login exige um contexto seguro (`localhost` ou HTTPS): fora dele o navegador não oferece
+  o Web Crypto que o PKCE usa.
 
 ---
 

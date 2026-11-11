@@ -1,9 +1,6 @@
-import { API_BASE_URL } from '@/config/api'
+import { apiFetch } from '@/services/api'
 import type { ApiError } from '@/types/SearchResult'
 import type { Analysis, UploadPayload } from '@/types/Upload'
-
-/** Author attributed to every upload while there is no registration nor login (see akpedia-server's README). */
-const DEFAULT_USER_ID = import.meta.env.VITE_DEFAULT_USER_ID
 
 /** Used when the server answers an error with no body, or one with no `message`. */
 const DEFAULT_MESSAGES: Record<number, string> = {
@@ -32,7 +29,7 @@ type AnalysisResponse = {
 }
 
 async function postMultipart<T>(path: string, body: FormData, failure: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, { method: 'POST', body })
+  const response = await apiFetch(path, { method: 'POST', body })
 
   if (!response.ok) {
     const error = (await response.json().catch(() => null)) as ApiError | null
@@ -68,7 +65,6 @@ export function upload(payload: UploadPayload): Promise<void> {
   const body = new FormData()
   body.append('file', payload.file)
   body.append('categoryId', String(payload.categoryId))
-  if (DEFAULT_USER_ID) body.append('creatorId', DEFAULT_USER_ID)
   if (payload.name) body.append('name', payload.name)
   if (payload.description) body.append('description', payload.description)
   if (payload.suggestedCategoryId !== null) {

@@ -6,7 +6,7 @@ export type Analysis = {
   confidence: number | null
 }
 
-/** What `POST /api/v1/documents` takes, besides the author attributed from `VITE_DEFAULT_USER_ID`. */
+/** What `POST /api/v1/documents` takes; the author is the logged-in user. */
 export type UploadPayload = {
   file: File
   categoryId: number
