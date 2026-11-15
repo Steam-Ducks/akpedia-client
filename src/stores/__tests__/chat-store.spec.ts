@@ -69,4 +69,98 @@ describe('chat store', () => {
     expect(store.turns[0].status).toBe('done')
     expect(store.turns).toHaveLength(1)
   })
+
+  describe('detalhes das fontes', () => {
+    const source = { document_id: 42, name: 'Manual', category: 'Financeiro' }
+    const summary = {
+      document_id: 42,
+      name: 'Manual',
+      description: 'Regras de reembolso',
+      mime_type: 'application/pdf',
+      category: 'Financeiro',
+      responsible_name: 'Ana Souza',
+      updated_at: '2026-11-01T10:00:00Z',
+    }
+
+    const fetchBy = (routes: Record<string, unknown>) =>
+      vi.fn().mockImplementation(async (url: string) => {
+        const path = Object.keys(routes).find((route) => url.includes(route))!
+        return { ok: true, json: async () => routes[path] }
+      })
+
+    it('completa as fontes com descrição, autor e data da listagem de documentos', async () => {
+      vi.stubGlobal(
+        'fetch',
+        fetchBy({
+          '/api/v1/chat': { answer: 'Sim.', found: true, sources: [source] },
+          '/api/v1/documents': [summary],
+        }),
+      )
+      const store = useChatStore()
+
+      await store.ask('Prazo?')
+      await vi.waitFor(() =>
+        expect(store.withDetails([source])[0].responsible_name).toBe('Ana Souza'),
+      )
+
+      expect(store.withDetails([source])[0]).toMatchObject({
+        document_id: 42,
+        description: 'Regras de reembolso',
+        updated_at: '2026-11-01T10:00:00Z',
+      })
+    })
+
+    it('mantém a fonte só com nome e categoria quando o documento não está na listagem', async () => {
+      vi.stubGlobal(
+        'fetch',
+        fetchBy({
+          '/api/v1/chat': { answer: 'Sim.', found: true, sources: [source] },
+          '/api/v1/documents': [],
+        }),
+      )
+      const store = useChatStore()
+
+      await store.ask('Prazo?')
+      await store.ask('E agora?')
+
+      expect(store.withDetails([source])).toEqual([source])
+    })
+
+    it('não busca de novo os documentos que já conhece', async () => {
+      const fetchMock = fetchBy({
+        '/api/v1/chat': { answer: 'Sim.', found: true, sources: [source] },
+        '/api/v1/documents': [summary],
+      })
+      vi.stubGlobal('fetch', fetchMock)
+      const store = useChatStore()
+
+      await store.ask('Prazo?')
+      await vi.waitFor(() => expect(store.withDetails([source])[0].description).toBeDefined())
+      await store.ask('E agora?')
+
+      const listCalls = fetchMock.mock.calls.filter(([url]) => url.includes('/api/v1/documents'))
+      expect(listCalls).toHaveLength(1)
+    })
+
+    it('ignora a falha ao buscar os detalhes', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (url: string) => {
+          if (url.includes('/api/v1/chat')) {
+            return {
+              ok: true,
+              json: async () => ({ answer: 'Sim.', found: true, sources: [source] }),
+            }
+          }
+          throw new Error('rede')
+        }),
+      )
+      const store = useChatStore()
+
+      await store.ask('Prazo?')
+
+      expect(store.turns[0].status).toBe('done')
+      expect(store.withDetails([source])).toEqual([source])
+    })
+  })
 })

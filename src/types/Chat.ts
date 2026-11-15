@@ -4,6 +4,12 @@ export type ChatSource = {
   category: string
 }
 
+export type ChatSourceDetails = ChatSource & {
+  description?: string | null
+  responsible_name?: string
+  updated_at?: string
+}
+
 export type ChatAnswer = {
   answer: string
   found: boolean
