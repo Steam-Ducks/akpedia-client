@@ -57,3 +57,53 @@ export type BreachNoticeSendResult = {
   failed: number
   failures: BreachNoticeFailure[]
 }
+
+export type BreachNoticeRecipientStatus = 'SENT' | 'FAILED' | 'PENDING'
+
+export type BreachNoticeSummaryDto = {
+  id: number
+  subject: string
+  sent_by_name: string
+  anpd_informed: boolean
+  sent_at: string
+  total: number
+  sent: number
+  failed: number
+  pending: number
+}
+
+export type BreachNoticeRecipientDto = {
+  user_id: number
+  name: string
+  email: string
+  status: BreachNoticeRecipientStatus
+  error: string | null
+}
+
+export type BreachNoticeDetailDto = BreachNoticeSummaryDto & {
+  body: string
+  recipients: BreachNoticeRecipientDto[]
+}
+
+export type BreachNoticeSummary = {
+  id: number
+  subject: string
+  sentByName: string
+  sentAt: Date
+  total: number
+  sent: number
+  failed: number
+  pending: number
+}
+
+export type BreachNoticeRecipient = {
+  name: string
+  email: string
+  status: BreachNoticeRecipientStatus
+  error: string | null
+}
+
+export type BreachNoticeDetail = BreachNoticeSummary & {
+  body: string
+  recipients: BreachNoticeRecipient[]
+}
