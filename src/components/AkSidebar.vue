@@ -22,6 +22,7 @@ import {
   FileText,
   History,
   LayoutDashboard,
+  ShieldAlert,
   ShieldCheck,
   Upload,
   Users,
@@ -77,6 +78,7 @@ const adminEntryList = computed<NavEntry[]>(() => {
     { to: '/admin/permissions', display: 'Permissões', icon: ShieldCheck },
     { to: '/admin/audit', display: 'Auditoria', icon: History },
     { to: '/admin/terms', display: 'Termos de uso', icon: FileSignature },
+    { to: '/admin/breach-notices', display: 'Aviso de vazamento', icon: ShieldAlert },
   ]
 })
 

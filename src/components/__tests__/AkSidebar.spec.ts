@@ -92,6 +92,7 @@ describe('AkSidebar', () => {
         '/admin/permissions',
         '/admin/audit',
         '/admin/terms',
+        '/admin/breach-notices',
       ]),
     )
   })
