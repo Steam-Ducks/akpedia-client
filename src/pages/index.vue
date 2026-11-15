@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useResultStore } from '@/stores/result-store'
+import { useChatStore } from '@/stores/chat-store'
 import { sessionUser } from '@/services/auth'
+import { formatGreetingDate } from '@/utils/date'
 
 const userName = computed(() => sessionUser.value?.name.split(' ')[0] ?? '')
 const empresaName = 'Akaer'
+const today = formatGreetingDate(new Date())
+
+type Mode = 'search' | 'chat'
 
 const route = useRoute('/')
 const router = useRouter()
 const resultStore = useResultStore()
+const chatStore = useChatStore()
 const { query, categoryIds, results, recent, status, error } = storeToRefs(resultStore)
 
 /** Parses `?categories=1,3` into category ids, dropping anything that is not a positive integer. */
@@ -28,9 +34,50 @@ function syncRouteWithCategories() {
   })
 }
 
+const mode = computed<Mode>({
+  get: () => (route.query.mode === 'chat' ? 'chat' : 'search'),
+  set: (value) => {
+    router.replace({ query: { ...route.query, mode: value === 'chat' ? 'chat' : undefined } })
+  },
+})
+
+const greetingHidden = computed(() => mode.value === 'chat' && chatStore.turns.length > 0)
+
 watch(categoryIds, syncRouteWithCategories)
 
+const searchbox = ref<{ $el: HTMLElement } | null>(null)
+
+const BOX_MOVE_MS = 400
+let boxMove: Animation | null = null
+
+watch(
+  mode,
+  async () => {
+    const box = searchbox.value?.$el
+    if (!box) return
+    const before = box.getBoundingClientRect().top
+    await nextTick()
+    boxMove?.cancel()
+    const shift = before - box.getBoundingClientRect().top
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (shift === 0 || reduceMotion || typeof box.animate !== 'function') return
+    boxMove = box.animate(
+      [{ transform: `translateY(${shift}px)` }, { transform: 'translateY(0)' }],
+      {
+        duration: BOX_MOVE_MS,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      },
+    )
+  },
+  { flush: 'pre' },
+)
+
+watch(mode, (value) => {
+  if (value === 'search' && status.value === 'idle') resultStore.loadRecent()
+})
+
 onMounted(async () => {
+  if (mode.value === 'chat') return
   const idsFromRoute = categoryIdsFromRoute()
   if (idsFromRoute.length > 0) {
     categoryIds.value = idsFromRoute
@@ -42,18 +89,26 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="ak-general">
-    <div class="salutation-wrapper">
-      <div class="salutation-date">Terça-feira, 08 de setembro</div>
-      <div class="salutation-welcome text-title-large">
-        Olá, {{ userName }}. <span class="text-highlight">O que você procura?</span>
-      </div>
-      <div class="salutation-description">
-        Encontre documentos técnicos, normativas e informações de {{ empresaName }} em um só lugar.
+  <main class="ak-general" :class="{ chatting: mode === 'chat' }">
+    <div
+      class="salutation-wrapper"
+      :class="{ hidden: greetingHidden }"
+      :aria-hidden="greetingHidden"
+    >
+      <div class="salutation-content">
+        <div class="salutation-date">{{ today }}</div>
+        <div class="salutation-welcome text-title-large">
+          Olá, {{ userName }}. <span class="text-highlight">O que você procura?</span>
+        </div>
+        <div class="salutation-description">
+          Encontre documentos técnicos, normativas e informações de {{ empresaName }} em um só
+          lugar.
+        </div>
       </div>
     </div>
-    <AkSearchbox />
-    <div class="result-section">
+    <AkChatPanel v-if="mode === 'chat'" />
+    <AkSearchbox ref="searchbox" v-model:mode="mode" with-mode-switch />
+    <div v-if="mode === 'search'" class="result-section">
       <div class="result-list">
         <template v-if="status === 'idle' && recent.length > 0">
           <div class="text-muted">Documentos recentes</div>
@@ -78,16 +133,50 @@ onMounted(async () => {
 
 <style scoped>
 .ak-general {
+  min-height: 100%;
   padding: var(--spacing-10);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
 }
 
+.ak-general.chatting {
+  height: 100%;
+}
+
 .salutation-wrapper {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    opacity 0.4s ease,
+    grid-template-rows 0s,
+    margin-bottom 0s;
+}
+
+.salutation-wrapper.hidden {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-bottom: calc(-1 * var(--spacing-4));
+  pointer-events: none;
+  transition:
+    opacity 0.4s ease,
+    grid-template-rows 0s 0.4s,
+    margin-bottom 0s 0.4s;
+}
+
+.salutation-content {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .salutation-wrapper,
+  .salutation-wrapper.hidden {
+    transition: none;
+  }
 }
 
 .salutation-date {
