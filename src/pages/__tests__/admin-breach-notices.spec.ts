@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import BreachNoticesPage from '../admin/breach-notices.vue'
 import {
+  fetchBreachNotices,
   fetchBreachNoticeTemplate,
   previewBreachNotice,
   sendBreachNotice,
@@ -12,6 +13,8 @@ import { confirmAction } from '@/utils/confirm'
 
 vi.mock('@/utils/confirm', () => ({ confirmAction: vi.fn() }))
 vi.mock('@/services/breach-notices', () => ({
+  fetchBreachNotices: vi.fn(),
+  fetchBreachNotice: vi.fn(),
   fetchBreachNoticeTemplate: vi.fn(),
   previewBreachNotice: vi.fn(),
   sendBreachNotice: vi.fn(),
@@ -87,6 +90,13 @@ describe('admin breach notices page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(fetchBreachNoticeTemplate).mockResolvedValue(template)
+    vi.mocked(fetchBreachNotices).mockResolvedValue({
+      content: [],
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0,
+    })
     vi.mocked(fetchAdminUsers).mockResolvedValue(
       page([user('kc-1', 'Ana'), user('kc-2', 'Bruno', false)]) as never,
     )
@@ -182,6 +192,43 @@ describe('admin breach notices page', () => {
     )
     expect(wrapper.text()).toContain('1 de 2 e-mails enviados; 1 falharam')
     expect(wrapper.text()).toContain('bruno@akaer.com.br: REJECTED: 550')
+  })
+
+  it('shows a notice just sent at the top of the history, without a reload', async () => {
+    vi.mocked(sendBreachNotice).mockResolvedValue({
+      id: 7,
+      total: 1,
+      sent: 1,
+      failed: 0,
+      failures: [],
+    })
+    const wrapper = await mountPage()
+    expect(wrapper.text()).toContain('Nenhum aviso foi enviado ainda.')
+    vi.mocked(fetchBreachNotices).mockResolvedValue({
+      content: [
+        {
+          id: 7,
+          subject: 'Aviso recém-enviado',
+          sentByName: 'Admin',
+          sentAt: new Date('2026-11-15T12:00:00Z'),
+          total: 1,
+          sent: 1,
+          failed: 0,
+          pending: 0,
+        },
+      ],
+      page: 0,
+      size: 10,
+      totalElements: 1,
+      totalPages: 1,
+    })
+    await fillRequired(wrapper)
+    await wrapper.get('input.anpd').setValue(true)
+
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('.history-list .history-item').text()).toContain('Aviso recém-enviado')
   })
 
   it('removes a chosen person with its chip', async () => {
