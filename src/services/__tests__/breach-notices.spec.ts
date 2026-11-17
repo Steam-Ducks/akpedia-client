@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { fetchBreachNoticeTemplate, previewBreachNotice, sendBreachNotice } from '../breach-notices'
+import {
+  fetchBreachNotice,
+  fetchBreachNotices,
+  fetchBreachNoticeTemplate,
+  previewBreachNotice,
+  sendBreachNotice,
+} from '../breach-notices'
 
 const stubFetch = (body: unknown, ok = true, status = 200) => {
   const fetchMock = vi.fn().mockResolvedValue({ ok, status, json: async () => body })
@@ -100,5 +106,83 @@ describe('breach notices service', () => {
     stubFetch({ code: 'invalid_breach_notice', message: 'Contas sem usuario: kc-9.' }, false, 400)
 
     await expect(sendBreachNotice(draft)).rejects.toThrow('Contas sem usuario: kc-9.')
+  })
+
+  it('lists the notices sent, newest first, a page at a time', async () => {
+    const fetchMock = stubFetch({
+      content: [
+        {
+          id: 5,
+          subject: 'Aviso',
+          sent_by_name: 'Admin',
+          anpd_informed: true,
+          sent_at: '2026-11-12T10:30:00Z',
+          total: 120,
+          sent: 119,
+          failed: 1,
+          pending: 0,
+        },
+      ],
+      page: 1,
+      size: 10,
+      total_elements: 11,
+      total_pages: 2,
+    })
+
+    const result = await fetchBreachNotices(1)
+
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/admin/breach-notices?page=1&size=10')
+    expect(result).toEqual({
+      content: [
+        {
+          id: 5,
+          subject: 'Aviso',
+          sentByName: 'Admin',
+          sentAt: new Date('2026-11-12T10:30:00Z'),
+          total: 120,
+          sent: 119,
+          failed: 1,
+          pending: 0,
+        },
+      ],
+      page: 1,
+      size: 10,
+      totalElements: 11,
+      totalPages: 2,
+    })
+  })
+
+  it('loads a notice with the status of each recipient', async () => {
+    const fetchMock = stubFetch({
+      id: 5,
+      subject: 'Aviso',
+      body: 'Texto enviado',
+      sent_by_name: 'Admin',
+      anpd_informed: true,
+      sent_at: '2026-11-12T10:30:00Z',
+      total: 2,
+      sent: 1,
+      failed: 1,
+      pending: 0,
+      recipients: [
+        { user_id: 10, name: 'Ana', email: 'ana@x.com', status: 'SENT', error: null },
+        { user_id: 11, name: 'Bruno', email: 'b@x.com', status: 'FAILED', error: 'REJECTED: 550' },
+      ],
+    })
+
+    const notice = await fetchBreachNotice(5)
+
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/admin/breach-notices/5')
+    expect(notice.body).toBe('Texto enviado')
+    expect(notice.recipients).toEqual([
+      { name: 'Ana', email: 'ana@x.com', status: 'SENT', error: null },
+      { name: 'Bruno', email: 'b@x.com', status: 'FAILED', error: 'REJECTED: 550' },
+    ])
+  })
+
+  it("shows the server's message when a notice can't be loaded", async () => {
+    stubFetch({ code: 'not_found', message: 'Aviso não encontrado.' }, false, 404)
+
+    await expect(fetchBreachNotice(9)).rejects.toThrow('Aviso não encontrado.')
   })
 })

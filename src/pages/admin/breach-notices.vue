@@ -44,6 +44,8 @@ const sending = ref(false)
 const sendError = ref<string | null>(null)
 const result = ref<BreachNoticeSendResult | null>(null)
 
+const history = ref<{ reload: () => Promise<void> } | null>(null)
+
 const filledFields = computed(() => fields.value.filter((field) => !field.automatic))
 
 const recipientCount = computed(() => selected.value.length)
@@ -162,6 +164,7 @@ const submit = async () => {
   result.value = null
   try {
     result.value = await sendBreachNotice(draft())
+    history.value?.reload()
   } catch (e) {
     sendError.value = e instanceof Error ? e.message : 'Não foi possível enviar o aviso.'
   } finally {
@@ -307,6 +310,8 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
         </div>
       </section>
     </form>
+
+    <AkBreachNoticeHistory ref="history" />
   </main>
 </template>
 

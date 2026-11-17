@@ -6,14 +6,17 @@ import type { SubmissionStatus } from '@/types/Submission'
 /** A user account's status, on the admin's users screen. */
 export type AccountStatus = 'ACTIVE' | 'DISABLED'
 
+/** A recipient's status, on a data breach notice. */
+export type RecipientStatus = 'SENT' | 'FAILED' | 'PENDING'
+
 type Props = {
-  status: SubmissionStatus | AccountStatus
+  status: SubmissionStatus | AccountStatus | RecipientStatus
 }
 
 const props = defineProps<Props>()
 
 const presentationByStatus: Record<
-  SubmissionStatus | AccountStatus,
+  SubmissionStatus | AccountStatus | RecipientStatus,
   { label: string; icon: unknown; tone: 'muted' | 'primary' | 'alert' }
 > = {
   UNDER_REVIEW: { label: 'Em análise', icon: Clock, tone: 'muted' },
@@ -23,6 +26,9 @@ const presentationByStatus: Record<
   RETURNED: { label: 'Devolvido', icon: XCircle, tone: 'alert' },
   ACTIVE: { label: 'Ativo', icon: CheckCircle2, tone: 'primary' },
   DISABLED: { label: 'Desativado', icon: Ban, tone: 'muted' },
+  SENT: { label: 'Enviado', icon: CheckCircle2, tone: 'primary' },
+  FAILED: { label: 'Falhou', icon: XCircle, tone: 'alert' },
+  PENDING: { label: 'Pendente', icon: Clock, tone: 'muted' },
 }
 
 const presentation = computed(() => presentationByStatus[props.status])
