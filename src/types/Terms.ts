@@ -44,3 +44,28 @@ export type TermsDraft = {
   title: string
   content: string
 }
+
+export type TermsAcceptanceEntryDto = {
+  id: number
+  version: string
+  user_id: number
+  user_name: string | null
+  user_email: string | null
+  accepted_at: string
+}
+
+export type TermsAcceptanceEntry = {
+  id: number
+  version: string
+  userId: number
+  userName: string | null
+  userEmail: string | null
+  acceptedAt: Date
+}
+
+export type TermsAcceptanceFilters = {
+  version?: string
+  user?: string
+  page?: number
+  size?: number
+}

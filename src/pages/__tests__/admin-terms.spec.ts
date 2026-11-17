@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import AdminTermsPage from '../admin/terms.vue'
 import {
   fetchTerms,
+  fetchTermsAcceptances,
   fetchTermsVersions,
   publishTerms,
   TermsVersionExistsError,
@@ -18,6 +19,7 @@ vi.mock('@/services/terms', async (importOriginal) => {
   return {
     fetchTerms: vi.fn(),
     fetchTermsVersions: vi.fn(),
+    fetchTermsAcceptances: vi.fn(),
     publishTerms: vi.fn(),
     acceptTerms: vi.fn(),
     TermsChangedError: actual.TermsChangedError,
@@ -52,6 +54,13 @@ describe('admin terms page', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    vi.mocked(fetchTermsAcceptances).mockResolvedValue({
+      content: [],
+      page: 0,
+      size: 20,
+      totalElements: 0,
+      totalPages: 0,
+    })
   })
 
   afterEach(() => {
@@ -189,9 +198,103 @@ describe('admin terms page', () => {
       content: 'Novo texto.',
     })
     expect(fetchTerms).toHaveBeenCalled()
+    expect(fetchTermsAcceptances).toHaveBeenCalledTimes(2)
     expect(wrapper.text()).toContain('Versão 2026.1 publicada.')
     expect(wrapper.text()).toContain('A versão atual é 2026.1.')
     expect((versionInput(wrapper).element as HTMLInputElement).value).toBe('')
+  })
+
+  describe('acceptances', () => {
+    const entry = (id: number, name: string | null, email: string | null, versionName = '2.0') => ({
+      id,
+      version: versionName,
+      userId: id,
+      userName: name,
+      userEmail: email,
+      acceptedAt: new Date('2026-11-01T10:00:00'),
+    })
+
+    const acceptancePage = (content: ReturnType<typeof entry>[], totalPages = 1) => ({
+      content,
+      page: 0,
+      size: 20,
+      totalElements: content.length,
+      totalPages,
+    })
+
+    it('lists who accepted which version, and when', async () => {
+      vi.mocked(fetchTermsVersions).mockResolvedValue([version('2.0'), version('1.0')])
+      vi.mocked(fetchTermsAcceptances).mockResolvedValue(
+        acceptancePage([entry(1, 'Ana Souza', 'ana@akaer.com')]),
+      )
+
+      const wrapper = await mountPage()
+
+      const row = wrapper.get('.acceptance-row')
+      expect(row.text()).toContain('Ana Souza')
+      expect(row.text()).toContain('ana@akaer.com')
+      expect(row.text()).toContain('2.0')
+      expect(row.text()).toContain('01/11/2026')
+      expect(fetchTermsAcceptances).toHaveBeenCalledWith({
+        version: '',
+        user: '',
+        page: 0,
+        size: 20,
+      })
+    })
+
+    it('shows the anonymized row of a deleted account as the server sends it', async () => {
+      vi.mocked(fetchTermsVersions).mockResolvedValue([version('2.0')])
+      vi.mocked(fetchTermsAcceptances).mockResolvedValue(
+        acceptancePage([entry(1, 'Usuário removido', 'removido-1@anonimizado.invalid')]),
+      )
+
+      const wrapper = await mountPage()
+
+      expect(wrapper.get('.acceptance-row').text()).toContain('Usuário removido')
+      expect(wrapper.get('.acceptance-row').text()).toContain('removido-1@anonimizado.invalid')
+    })
+
+    it('says so when nobody accepted yet', async () => {
+      vi.mocked(fetchTermsVersions).mockResolvedValue([version('2.0')])
+
+      const wrapper = await mountPage()
+
+      expect(wrapper.text()).toContain('Nenhum aceite com esses filtros.')
+    })
+
+    it('filters by version and employee, going back to the first page', async () => {
+      vi.mocked(fetchTermsVersions).mockResolvedValue([version('2.0'), version('1.0')])
+      vi.mocked(fetchTermsAcceptances).mockResolvedValue(
+        acceptancePage([entry(1, 'Ana Souza', 'ana@akaer.com')], 3),
+      )
+      const wrapper = await mountPage()
+      await wrapper.get('.ak-paginator button:last-child').trigger('click')
+      await flushPromises()
+      expect(fetchTermsAcceptances).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }))
+
+      vi.useFakeTimers()
+      await wrapper.get('.filter-version select').setValue('1.0')
+      await wrapper.get('.filter-user input').setValue('ana')
+      await vi.advanceTimersByTimeAsync(300)
+      vi.useRealTimers()
+
+      expect(fetchTermsAcceptances).toHaveBeenLastCalledWith({
+        version: '1.0',
+        user: 'ana',
+        page: 0,
+        size: 20,
+      })
+    })
+
+    it('reports a failed load', async () => {
+      vi.mocked(fetchTermsVersions).mockResolvedValue([version('2.0')])
+      vi.mocked(fetchTermsAcceptances).mockRejectedValue(new Error('Falhou.'))
+
+      const wrapper = await mountPage()
+
+      expect(wrapper.text()).toContain('Falhou.')
+    })
   })
 
   it('does not publish when the admin cancels', async () => {

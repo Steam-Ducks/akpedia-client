@@ -3,6 +3,7 @@ import {
   acceptTerms,
   declineTerms,
   fetchTerms,
+  fetchTermsAcceptances,
   publishTerms,
   sameTermsVersion,
   TERMS_VERSION_PATTERN,
@@ -163,5 +164,56 @@ describe('terms service', () => {
     )
 
     await expect(declineTerms('3.0')).rejects.toThrow('Os termos mudaram.')
+  })
+
+  it('asks for a page of acceptances with only the filters that are set', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        content: [
+          {
+            id: 7,
+            version: '2.0',
+            user_id: 3,
+            user_name: 'Ana Souza',
+            user_email: 'ana@akaer.com',
+            accepted_at: '2026-11-01T10:00:00Z',
+          },
+        ],
+        page: 1,
+        size: 20,
+        total_elements: 21,
+        total_pages: 2,
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const page = await fetchTermsAcceptances({ version: '2.0', user: ' ana ', page: 1 })
+
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toContain('/api/v1/admin/terms/acceptances?page=1&size=20&version=2.0&user=ana')
+    expect(page.totalPages).toBe(2)
+    expect(page.content[0]).toEqual({
+      id: 7,
+      version: '2.0',
+      userId: 3,
+      userName: 'Ana Souza',
+      userEmail: 'ana@akaer.com',
+      acceptedAt: new Date('2026-11-01T10:00:00Z'),
+    })
+
+    await fetchTermsAcceptances()
+    expect(fetchMock.mock.calls[1][0]).toMatch(/acceptances\?page=0&size=20$/)
+  })
+
+  it('reports a failed load of the acceptances', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }),
+    )
+
+    await expect(fetchTermsAcceptances()).rejects.toThrow(
+      'Não foi possível carregar os aceites dos termos (HTTP 500).',
+    )
   })
 })
