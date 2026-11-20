@@ -4,6 +4,8 @@ import type { ApiError, Category, DocumentSummary, SearchResult } from '@/types/
 /** Largest limit the server accepts (`akpedia.search.max-limit`), so every match comes back. */
 const SEARCH_LIMIT = 50
 
+export const MAX_RECENT_LIMIT = SEARCH_LIMIT
+
 /** How many documents the home page lists before anything is searched. */
 const RECENT_LIMIT = 5
 
@@ -34,8 +36,8 @@ export function searchDocuments(
   return getJson('/api/v1/search', params, 'A busca falhou')
 }
 
-export function fetchRecentDocuments(): Promise<DocumentSummary[]> {
-  const params = new URLSearchParams({ limit: String(RECENT_LIMIT) })
+export function fetchRecentDocuments(limit = RECENT_LIMIT): Promise<DocumentSummary[]> {
+  const params = new URLSearchParams({ limit: String(limit) })
   return getJson('/api/v1/documents', params, 'Não foi possível carregar os documentos')
 }
 

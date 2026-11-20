@@ -1,8 +1,13 @@
 import { apiFetch } from '@/services/api'
 import type { ApiError } from '@/types/SearchResult'
+import { toPage } from '@/services/page-mapper'
+import type { Page, PageDto } from '@/types/Page'
 import type {
   TermsAcceptance,
   TermsAcceptanceDto,
+  TermsAcceptanceEntry,
+  TermsAcceptanceEntryDto,
+  TermsAcceptanceFilters,
   TermsDraft,
   TermsStatusDto,
   TermsVersion,
@@ -32,6 +37,15 @@ export const toTermsVersion = (dto: TermsVersionDto): TermsVersion => ({
 
 const toTermsAcceptance = (dto: TermsAcceptanceDto): TermsAcceptance => ({
   version: dto.version,
+  acceptedAt: new Date(dto.accepted_at),
+})
+
+const toTermsAcceptanceEntry = (dto: TermsAcceptanceEntryDto): TermsAcceptanceEntry => ({
+  id: dto.id,
+  version: dto.version,
+  userId: dto.user_id,
+  userName: dto.user_name,
+  userEmail: dto.user_email,
   acceptedAt: new Date(dto.accepted_at),
 })
 
@@ -119,4 +133,25 @@ export async function publishTerms(draft: TermsDraft): Promise<TermsVersion> {
     'Não foi possível publicar os termos de uso',
   )
   return toTermsVersion(published)
+}
+
+const ACCEPTANCES_PAGE_SIZE = 20
+
+/** Who accepted which version, newest first. Only the filters that are set are sent. Admins only. */
+export async function fetchTermsAcceptances(
+  filters: TermsAcceptanceFilters = {},
+): Promise<Page<TermsAcceptanceEntry>> {
+  const params = new URLSearchParams({
+    page: String(filters.page ?? 0),
+    size: String(filters.size ?? ACCEPTANCES_PAGE_SIZE),
+  })
+  if (filters.version) params.set('version', filters.version)
+  if (filters.user?.trim()) params.set('user', filters.user.trim())
+
+  const entries = await send<PageDto<TermsAcceptanceEntryDto>>(
+    `/api/v1/admin/terms/acceptances?${params}`,
+    {},
+    'Não foi possível carregar os aceites dos termos',
+  )
+  return toPage(entries, toTermsAcceptanceEntry)
 }

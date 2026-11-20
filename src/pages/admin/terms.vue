@@ -228,6 +228,8 @@ onMounted(load)
         </div>
       </section>
     </div>
+
+    <AkTermsAcceptances v-if="status === 'done'" :versions="versions" />
   </main>
 </template>
 
