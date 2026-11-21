@@ -43,7 +43,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   <div class="source-row">
     <button
       type="button"
-      class="row-arrow"
+      class="row-arrow previous"
       :class="{ inactive: !canScroll }"
       :tabindex="canScroll ? 0 : -1"
       :aria-hidden="!canScroll"
@@ -62,7 +62,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
     </div>
     <button
       type="button"
-      class="row-arrow"
+      class="row-arrow next"
       :class="{ inactive: !canScroll }"
       :tabindex="canScroll ? 0 : -1"
       :aria-hidden="!canScroll"
@@ -75,10 +75,12 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 </template>
 
 <style lang="css" scoped>
+/* The arrows float over the track's edges instead of taking room beside it, so the cards line up
+   with whatever is above them (the answer's text). */
 .source-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
   align-self: stretch;
   min-width: 0;
 }
@@ -104,6 +106,8 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 }
 
 .row-arrow {
+  position: absolute;
+  z-index: 1;
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
@@ -113,9 +117,18 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   border: 1px solid var(--color-border);
   border-radius: 50%;
   background-color: var(--color-white);
+  box-shadow: 0 2px 6px 0 rgb(from var(--color-black) r g b / 0.14);
   color: var(--color-primary);
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.row-arrow.previous {
+  left: calc(-1 * var(--spacing-3));
+}
+
+.row-arrow.next {
+  right: calc(-1 * var(--spacing-3));
 }
 
 .row-arrow.inactive {

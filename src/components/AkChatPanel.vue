@@ -27,7 +27,7 @@ watch(
       <div
         class="chat-answer"
         :class="{
-          wide: turn.answer?.found && turn.answer.sources.length > 0,
+          'with-sources': turn.answer?.found && turn.answer.sources.length > 0,
           plain: turn.status === 'loading',
         }"
       >
@@ -118,12 +118,12 @@ watch(
   background-color: var(--color-white);
   box-shadow: var(--chat-bubble-shadow);
 }
-.chat-answer.wide {
-  align-self: stretch;
-  max-width: 100%;
+/* With sources the bubble holds the cards too, so it takes a fixed share of the panel instead of
+   shrinking to the text; the cards fit three to a row from about 50rem. */
+.chat-answer.with-sources {
+  width: 80%;
 }
 
-.chat-answer.wide,
 .chat-answer.plain {
   padding: 0;
   border: none;

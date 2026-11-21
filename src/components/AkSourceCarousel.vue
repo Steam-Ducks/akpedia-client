@@ -54,7 +54,7 @@ watch(expanded, async (value) => {
 
 .more-button {
   cursor: pointer;
-  padding: var(--spacing-1) var(--spacing-3);
+  padding: var(--spacing-1) 0;
   background: transparent;
   color: var(--color-primary);
   font-size: var(--font-sm);
