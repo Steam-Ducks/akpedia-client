@@ -5,8 +5,7 @@ import {
   fetchTerms,
   fetchTermsAcceptances,
   publishTerms,
-  sameTermsVersion,
-  TERMS_VERSION_PATTERN,
+  nextTermsVersion,
   TermsChangedError,
   TermsVersionExistsError,
 } from '../terms'
@@ -82,12 +81,11 @@ describe('terms service', () => {
     await expect(acceptTerms('3.0')).rejects.toBeInstanceOf(TermsChangedError)
   })
 
-  it('publishes the typed version, the title and the plain text', async () => {
+  it('publishes the title and the plain text; the server numbers it', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => versionDto })
     vi.stubGlobal('fetch', fetchMock)
 
     const published = await publishTerms({
-      version: '3.0',
       title: 'Termos de uso',
       content: 'Texto.',
     })
@@ -95,7 +93,6 @@ describe('terms service', () => {
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toContain('/api/v1/admin/terms')
     expect(JSON.parse(init.body)).toEqual({
-      version: '3.0',
       title: 'Termos de uso',
       content: 'Texto.',
     })
@@ -110,26 +107,26 @@ describe('terms service', () => {
         status: 409,
         json: async () => ({
           code: 'terms_version_exists',
-          message: 'Já existe a versão 1.0. Use um número de versão novo.',
+          message: 'Já existe a versão 1.0. Recarregue a página e publique de novo.',
         }),
       }),
     )
 
-    const publishing = publishTerms({ version: '1.0', title: 'Termos', content: 'Texto.' })
+    const publishing = publishTerms({ title: 'Termos', content: 'Texto.' })
 
     await expect(publishing).rejects.toBeInstanceOf(TermsVersionExistsError)
     await expect(publishing).rejects.toThrow('Já existe a versão 1.0.')
   })
 
-  it('takes the versions the server takes, and tells them apart ignoring case and spaces', () => {
-    for (const ok of ['1', '1.0', '2026.1', 'v2-rc_1', 'x'.repeat(20)]) {
-      expect(TERMS_VERSION_PATTERN.test(ok)).toBe(true)
-    }
-    for (const bad of ['', '1 0', '1,0', 'versão', '1.0!', 'x'.repeat(21)]) {
-      expect(TERMS_VERSION_PATTERN.test(bad)).toBe(false)
-    }
-    expect(sameTermsVersion(' V1.0 ', 'v1.0')).toBe(true)
-    expect(sameTermsVersion('1.0', '1.0.1')).toBe(false)
+  it('numbers the next version as the next X.0, as the server does', () => {
+    expect(nextTermsVersion([])).toBe('1.0')
+    expect(nextTermsVersion(['2.0', '1.0'])).toBe('3.0')
+    // As numbers, not text: 10.0 after 9.0; an older X.Y counts by its X.
+    expect(nextTermsVersion(['9.0'])).toBe('10.0')
+    expect(nextTermsVersion(['1.3', '1.0'])).toBe('2.0')
+    // Labels from before the numbering are skipped, wherever they are in the list.
+    expect(nextTermsVersion(['OI', '4.0', '2026.1-rc_2', '1.'])).toBe('5.0')
+    expect(nextTermsVersion(['OI'])).toBe('1.0')
   })
 
   it('declines the version that was shown', async () => {

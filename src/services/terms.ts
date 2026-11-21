@@ -17,15 +17,24 @@ import type {
 /** Raised when accepting a version that is no longer the current one (409 `terms_changed`). */
 export class TermsChangedError extends Error {}
 
-/** Raised when publishing a version that was published before, in any case (409 `terms_version_exists`). */
+/** Raised when the number the server counted was taken anyway (409 `terms_version_exists`). */
 export class TermsVersionExistsError extends Error {}
 
-/** A version the server takes: trimmed, 1–20 letters, digits, `.`, `-` or `_`. */
-export const TERMS_VERSION_PATTERN = /^[A-Za-z0-9._-]{1,20}$/
+/** `X.0`, or an older `X.Y`: counted by its `X`. Anything else is a label from before the numbering. */
+const NUMBERED_VERSION = /^(\d+)\.\d+$/
 
-/** Versions are told apart ignoring case and the spaces around them, as the server does. */
-export const sameTermsVersion = (a: string, b: string) =>
-  a.trim().toLowerCase() === b.trim().toLowerCase()
+/**
+ * The version the next publish gets, counted as the server does: one past the highest major,
+ * `X.0`, skipping labels that are not numbered. Only shown to the admin: the server numbers it.
+ */
+export const nextTermsVersion = (published: string[]): string => {
+  let major = 0
+  for (const version of published) {
+    const numbered = NUMBERED_VERSION.exec(version.trim())
+    if (numbered) major = Math.max(major, Number(numbered[1]))
+  }
+  return `${major + 1}.0`
+}
 
 export const toTermsVersion = (dto: TermsVersionDto): TermsVersion => ({
   version: dto.version,
@@ -123,8 +132,8 @@ export async function fetchTermsVersions(): Promise<TermsVersion[]> {
 }
 
 /**
- * Publishes a new version, named `draft.version`; every user, the admin included, has to accept it.
- * Throws {@link TermsVersionExistsError} when that version was published before. Admins only.
+ * Publishes a new version, numbered by the server as the next `X.0`; every user, the admin
+ * included, has to accept it. Admins only.
  */
 export async function publishTerms(draft: TermsDraft): Promise<TermsVersion> {
   const published = await send<TermsVersionDto>(

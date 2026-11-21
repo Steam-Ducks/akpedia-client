@@ -188,12 +188,12 @@ onBeforeUnmount(() => clearTimeout(filterTimer))
 
       <label class="form-field">
         <span class="text-label-small">De</span>
-        <AkInput v-model="from" type="date" class="filter-from" />
+        <AkDatePicker v-model="from" :max="to" class="filter-from" />
       </label>
 
       <label class="form-field">
         <span class="text-label-small">Até</span>
-        <AkInput v-model="to" type="date" class="filter-to" />
+        <AkDatePicker v-model="to" :min="from" class="filter-to" />
       </label>
 
       <AkButton type="button" class="clear-filters" @click="clearFilters">Limpar filtros</AkButton>
