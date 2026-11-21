@@ -1,7 +1,15 @@
+/**
+ * How a field is typed and checked: one line, several lines, a date ("2026-11-10"), or a date or
+ * period ("2026-11-08" or "2026-11-08/2026-11-09").
+ */
+export type BreachNoticeFieldType = 'TEXT' | 'MULTILINE' | 'DATE' | 'DATE_RANGE'
+
 export type BreachNoticeFieldDto = {
   name: string
   required: boolean
   automatic: boolean
+  /** Missing from a server without field types; taken as TEXT. */
+  type?: BreachNoticeFieldType
   description: string
   example: string
 }

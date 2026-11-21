@@ -26,7 +26,24 @@ const loadError = ref<string | null>(null)
 const subject = ref('')
 const body = ref('')
 const fields = ref<BreachNoticeField[]>([])
+/** Each field's value; for a period (DATE_RANGE), its start. */
 const fieldValues = ref<Record<string, string>>({})
+/** The optional end of each period (DATE_RANGE), "YYYY-MM-DD" or ''. */
+const rangeEnds = ref<Record<string, string>>({})
+
+const pad = (n: number) => String(n).padStart(2, '0')
+const now = new Date()
+/** Today as "YYYY-MM-DD": no date in the notice can be after it. */
+const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+
+const typeOf = (field: BreachNoticeField) => field.type ?? 'TEXT'
+
+/** The value sent for a field: a period goes as "start/end" when it has an end. */
+const valueOf = (field: BreachNoticeField) => {
+  const value = fieldValues.value[field.name] ?? ''
+  const end = rangeEnds.value[field.name] ?? ''
+  return typeOf(field) === 'DATE_RANGE' && value && end ? `${value}/${end}` : value
+}
 
 const recipientMode = ref<'all' | 'selected'>('all')
 const search = ref('')
@@ -75,6 +92,31 @@ const missingRequired = computed(() =>
   filledFields.value.some((field) => field.required && !fieldValues.value[field.name]?.trim()),
 )
 
+/**
+ * Dates out of order, as the server refuses them: a period that ends before it starts, an incident
+ * that starts after it was found, or ANPD told before it was found.
+ */
+const dateErrors = computed(() => {
+  const errors: string[] = []
+  for (const field of filledFields.value) {
+    const start = fieldValues.value[field.name]
+    const end = rangeEnds.value[field.name]
+    if (typeOf(field) === 'DATE_RANGE' && start && end && end < start) {
+      errors.push(`${field.description}: o fim não pode ser antes do início.`)
+    }
+  }
+  const incident = fieldValues.value.data_incidente
+  const discovery = fieldValues.value.data_descoberta
+  const anpd = fieldValues.value.data_comunicacao_anpd
+  if (incident && discovery && incident > discovery) {
+    errors.push('O incidente não pode ter começado depois da data em que foi descoberto.')
+  }
+  if (anpd && discovery && anpd < discovery) {
+    errors.push('A comunicação à ANPD não pode ser anterior à descoberta do incidente.')
+  }
+  return errors
+})
+
 const hasRecipients = computed(() => recipientMode.value === 'all' || recipientCount.value > 0)
 
 const canSend = computed(
@@ -82,6 +124,7 @@ const canSend = computed(
     subject.value.trim() !== '' &&
     body.value.trim() !== '' &&
     !missingRequired.value &&
+    dateErrors.value.length === 0 &&
     hasRecipients.value &&
     anpdInformed.value &&
     !sending.value,
@@ -90,9 +133,7 @@ const canSend = computed(
 const draft = (): BreachNoticeDraft => ({
   subject: subject.value,
   body: body.value,
-  fields: Object.fromEntries(
-    filledFields.value.map((field) => [field.name, fieldValues.value[field.name] ?? '']),
-  ),
+  fields: Object.fromEntries(filledFields.value.map((field) => [field.name, valueOf(field)])),
   recipients: recipientMode.value === 'all' ? 'all' : selected.value.map((user) => user.id),
 })
 
@@ -105,6 +146,7 @@ const load = async () => {
     body.value = template.body
     fields.value = template.fields
     fieldValues.value = Object.fromEntries(template.fields.map((field) => [field.name, '']))
+    rangeEnds.value = {}
     status.value = 'done'
   } catch (e) {
     loadError.value = e instanceof Error ? e.message : 'Não foi possível carregar o modelo.'
@@ -229,16 +271,59 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 
         <section class="admin-card">
           <div class="text-title-small">Dados do incidente</div>
-          <label v-for="field in filledFields" :key="field.name" class="form-field">
-            <span class="text-label-small">
-              {{ field.description }}<span v-if="field.required" class="required"> *</span>
-            </span>
-            <AkInput
-              v-model="fieldValues[field.name]"
-              :class="`field-${field.name}`"
-              :placeholder="field.example"
-            />
-          </label>
+          <template v-for="field in filledFields" :key="field.name">
+            <div v-if="typeOf(field) === 'DATE_RANGE'" class="form-field">
+              <span class="text-label-small">
+                {{ field.description }}<span v-if="field.required" class="required"> *</span>
+              </span>
+              <div class="date-range" :class="`field-${field.name}`">
+                <label class="date-range-part">
+                  <span class="text-muted">Início</span>
+                  <AkDatePicker
+                    v-model="fieldValues[field.name]"
+                    class="range-start"
+                    :max="today"
+                  />
+                </label>
+                <label class="date-range-part">
+                  <span class="text-muted">Fim (opcional)</span>
+                  <AkDatePicker
+                    v-model="rangeEnds[field.name]"
+                    class="range-end"
+                    :min="fieldValues[field.name] ?? ''"
+                    :max="today"
+                  />
+                </label>
+              </div>
+            </div>
+            <label v-else class="form-field">
+              <span class="text-label-small">
+                {{ field.description }}<span v-if="field.required" class="required"> *</span>
+              </span>
+              <AkDatePicker
+                v-if="typeOf(field) === 'DATE'"
+                v-model="fieldValues[field.name]"
+                :class="`field-${field.name}`"
+                :max="today"
+              />
+              <AkTextarea
+                v-else-if="typeOf(field) === 'MULTILINE'"
+                v-model="fieldValues[field.name]"
+                :class="`field-${field.name}`"
+                :placeholder="field.example"
+                :rows="3"
+              />
+              <AkInput
+                v-else
+                v-model="fieldValues[field.name]"
+                :class="`field-${field.name}`"
+                :placeholder="field.example"
+              />
+            </label>
+          </template>
+          <ul v-if="dateErrors.length" class="admin-feedback admin-feedback--error date-errors">
+            <li v-for="error in dateErrors" :key="error">{{ error }}</li>
+          </ul>
         </section>
 
         <section class="admin-card">
@@ -391,6 +476,22 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 }
 .required {
   color: var(--color-wine);
+}
+.date-range {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--spacing-4);
+}
+.date-range-part {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+.date-errors {
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 0;
+  padding-left: var(--spacing-8);
 }
 .recipient-modes {
   display: flex;

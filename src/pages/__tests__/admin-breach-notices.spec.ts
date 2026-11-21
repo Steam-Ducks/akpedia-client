@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import BreachNoticesPage from '../admin/breach-notices.vue'
+import AkDatePicker from '@/components/design-system/AkDatePicker.vue'
 import {
   fetchBreachNotices,
   fetchBreachNoticeTemplate,
@@ -29,6 +30,7 @@ const template = {
       name: 'nome_titular',
       required: true,
       automatic: true,
+      type: 'TEXT' as const,
       description: 'Nome do titular',
       example: 'Ana',
     },
@@ -36,8 +38,25 @@ const template = {
       name: 'data_descoberta',
       required: true,
       automatic: false,
+      type: 'DATE' as const,
       description: 'Data da descoberta',
-      example: '10/11/2026',
+      example: '2026-11-10',
+    },
+    {
+      name: 'data_incidente',
+      required: false,
+      automatic: false,
+      type: 'DATE_RANGE' as const,
+      description: 'Período do incidente',
+      example: '2026-11-08/2026-11-09',
+    },
+    {
+      name: 'dados_afetados',
+      required: false,
+      automatic: false,
+      type: 'MULTILINE' as const,
+      description: 'Dados afetados, um por linha',
+      example: 'Nome\nE-mail',
     },
     {
       name: 'nome_encarregado',
@@ -48,6 +67,8 @@ const template = {
     },
   ],
 }
+
+const EMPTY_FIELDS = { data_incidente: '', dados_afetados: '', nome_encarregado: '' }
 
 const user = (id: string, name: string, enabled = true): AdminUser => ({
   id,
@@ -80,8 +101,12 @@ const mountPage = async () => {
 
 type Wrapper = Awaited<ReturnType<typeof mountPage>>
 
+const setDate = async (wrapper: Wrapper, selector: string, value: string) => {
+  await wrapper.getComponent<typeof AkDatePicker>(selector).setValue(value)
+}
+
 const fillRequired = async (wrapper: Wrapper) => {
-  await wrapper.get('.field-data_descoberta input').setValue('10/11/2026')
+  await setDate(wrapper, '.field-data_descoberta', '2026-11-10')
 }
 
 const sendButton = (wrapper: Wrapper) => wrapper.get('button[type="submit"]')
@@ -117,9 +142,76 @@ describe('admin breach notices page', () => {
       '{{nome_titular}}',
     )
     expect(wrapper.find('.field-nome_titular').exists()).toBe(false)
-    expect(wrapper.get('.field-data_descoberta input').attributes('placeholder')).toBe('10/11/2026')
     expect(wrapper.text()).toContain('Data da descoberta *')
     expect(wrapper.text()).not.toContain('Encarregado *')
+  })
+
+  it('asks each field the way its type says: date, period, lines or text', async () => {
+    const wrapper = await mountPage()
+
+    expect(wrapper.find('.field-data_descoberta .ak-date-trigger').exists()).toBe(true)
+    expect(wrapper.find('.field-data_descoberta input').exists()).toBe(false)
+    expect(wrapper.find('.field-data_incidente .range-start').exists()).toBe(true)
+    expect(wrapper.find('.field-data_incidente .range-end').exists()).toBe(true)
+    expect(wrapper.find('.field-dados_afetados textarea').exists()).toBe(true)
+    expect(wrapper.get('.field-nome_encarregado input').attributes('placeholder')).toBe('Maria')
+  })
+
+  it('takes no date after today', async () => {
+    const wrapper = await mountPage()
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+
+    const discovery = wrapper.getComponent<typeof AkDatePicker>('.field-data_descoberta')
+    expect(discovery.props('max')).toBe(today)
+    expect(wrapper.getComponent<typeof AkDatePicker>('.range-end').props('max')).toBe(today)
+  })
+
+  it('sends a period as start/end, and a lone start as a single date', async () => {
+    vi.mocked(previewBreachNotice).mockResolvedValue({ subject: 's', body: 'b' })
+    const wrapper = await mountPage()
+    await fillRequired(wrapper)
+    await setDate(wrapper, '.range-start', '2026-11-08')
+    const previewButton = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Pré-visualizar'))!
+
+    await previewButton.trigger('click')
+    await flushPromises()
+    expect(previewBreachNotice).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        fields: expect.objectContaining({ data_incidente: '2026-11-08' }),
+      }),
+    )
+
+    await setDate(wrapper, '.range-end', '2026-11-09')
+    await previewButton.trigger('click')
+    await flushPromises()
+    expect(previewBreachNotice).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        fields: expect.objectContaining({ data_incidente: '2026-11-08/2026-11-09' }),
+      }),
+    )
+  })
+
+  it('keeps sending disabled while the dates are out of order', async () => {
+    const wrapper = await mountPage()
+    await fillRequired(wrapper)
+    await wrapper.get('input.anpd').setValue(true)
+
+    await setDate(wrapper, '.range-start', '2026-11-12')
+    expect(wrapper.get('.date-errors').text()).toContain('depois da data em que foi descoberto')
+    expect(sendButton(wrapper).attributes('disabled')).toBeDefined()
+
+    await setDate(wrapper, '.range-start', '2026-11-08')
+    await setDate(wrapper, '.range-end', '2026-11-07')
+    expect(wrapper.get('.date-errors').text()).toContain('o fim não pode ser antes do início')
+    expect(sendButton(wrapper).attributes('disabled')).toBeDefined()
+
+    await setDate(wrapper, '.range-end', '2026-11-09')
+    expect(wrapper.find('.date-errors').exists()).toBe(false)
+    expect(sendButton(wrapper).attributes('disabled')).toBeUndefined()
   })
 
   it('keeps sending disabled until the ANPD is confirmed', async () => {
@@ -155,7 +247,7 @@ describe('admin breach notices page', () => {
     await flushPromises()
 
     expect(previewBreachNotice).toHaveBeenCalledWith(
-      expect.objectContaining({ fields: { data_descoberta: '10/11/2026', nome_encarregado: '' } }),
+      expect.objectContaining({ fields: { data_descoberta: '2026-11-10', ...EMPTY_FIELDS } }),
     )
     expect(wrapper.get('.preview').text()).toContain('Aviso para Admin')
     expect(wrapper.get('.preview').text()).toContain('Olá Admin.')
@@ -295,9 +387,9 @@ describe('admin breach notices page', () => {
     await flushPromises()
 
     expect(wrapper.get('.send-error').text()).toContain('Contas sem usuario: kc-9.')
-    expect((wrapper.get('.field-data_descoberta input').element as HTMLInputElement).value).toBe(
-      '10/11/2026',
-    )
+    expect(
+      wrapper.getComponent<typeof AkDatePicker>('.field-data_descoberta').props('modelValue'),
+    ).toBe('2026-11-10')
   })
 
   it('shows the error when the template cannot be loaded', async () => {
