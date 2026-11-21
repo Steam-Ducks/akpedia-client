@@ -44,7 +44,28 @@ const sending = ref(false)
 const sendError = ref<string | null>(null)
 const result = ref<BreachNoticeSendResult | null>(null)
 
-const history = ref<{ reload: () => Promise<void> } | null>(null)
+const history = ref<{ reload: () => Promise<void>; $el: HTMLElement } | null>(null)
+const textCard = ref<HTMLElement | null>(null)
+
+/** Below this the message box is not shrunk to match a short list of notices. */
+const MIN_BODY_HEIGHT_PX = 160
+let bodySized = false
+
+/**
+ * Once, on the first load: grows or shrinks the message box so the Texto card is as tall as the
+ * notices sent beside it. Only side by side (wide screens); the admin can resize it afterwards.
+ */
+const matchTextCardToHistory = () => {
+  if (bodySized) return
+  bodySized = true
+  const historyElement = history.value?.$el
+  const card = textCard.value
+  const textarea = card?.querySelector<HTMLTextAreaElement>('.notice-body textarea')
+  if (!historyElement || !card || !textarea) return
+  if (historyElement.offsetTop !== card.offsetTop) return
+  const difference = historyElement.offsetHeight - card.offsetHeight
+  textarea.style.height = `${Math.max(MIN_BODY_HEIGHT_PX, textarea.offsetHeight + difference)}px`
+}
 
 const filledFields = computed(() => fields.value.filter((field) => !field.automatic))
 
@@ -192,126 +213,132 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
       <span>{{ loadError }}</span>
     </div>
 
-    <form v-else class="notice-form" @submit.prevent="submit">
-      <section class="admin-card">
-        <div class="text-title-small">Texto</div>
-        <label class="form-field">
-          <span class="text-label-small">Assunto</span>
-          <AkInput v-model="subject" class="notice-subject" />
-        </label>
-        <label class="form-field">
-          <span class="text-label-small">Mensagem</span>
-          <AkTextarea v-model="body" class="notice-body" :rows="14" />
-        </label>
-      </section>
-
-      <section class="admin-card">
-        <div class="text-title-small">Dados do incidente</div>
-        <label v-for="field in filledFields" :key="field.name" class="form-field">
-          <span class="text-label-small">
-            {{ field.description }}<span v-if="field.required" class="required"> *</span>
-          </span>
-          <AkInput
-            v-model="fieldValues[field.name]"
-            :class="`field-${field.name}`"
-            :placeholder="field.example"
-          />
-        </label>
-      </section>
-
-      <section class="admin-card">
-        <div class="text-title-small">Destinatários</div>
-        <fieldset class="recipient-modes">
-          <label class="role-option">
-            <input v-model="recipientMode" type="radio" value="all" name="recipients" />
-            <span>Todos os usuários</span>
+    <div v-else class="notice-layout">
+      <form class="notice-form" @submit.prevent="submit">
+        <section ref="textCard" class="admin-card">
+          <div class="text-title-small">Texto</div>
+          <label class="form-field">
+            <span class="text-label-small">Assunto</span>
+            <AkInput v-model="subject" class="notice-subject" />
           </label>
-          <label class="role-option">
-            <input v-model="recipientMode" type="radio" value="selected" name="recipients" />
-            <span>Pessoas selecionadas</span>
+          <label class="form-field">
+            <span class="text-label-small">Mensagem</span>
+            <AkTextarea v-model="body" class="notice-body" :rows="14" />
           </label>
-        </fieldset>
+        </section>
 
-        <template v-if="recipientMode === 'selected'">
-          <div v-if="selected.length" class="chips">
-            <span v-for="user in selected" :key="user.id" class="chosen-chip">
-              {{ user.name || user.email }}
-              <button
-                type="button"
-                class="chip-remove"
-                :aria-label="`Remover ${user.name || user.email}`"
-                @click="toggle(user)"
-              >
-                <X :size="14" />
-              </button>
+        <section class="admin-card">
+          <div class="text-title-small">Dados do incidente</div>
+          <label v-for="field in filledFields" :key="field.name" class="form-field">
+            <span class="text-label-small">
+              {{ field.description }}<span v-if="field.required" class="required"> *</span>
             </span>
+            <AkInput
+              v-model="fieldValues[field.name]"
+              :class="`field-${field.name}`"
+              :placeholder="field.example"
+            />
+          </label>
+        </section>
+
+        <section class="admin-card">
+          <div class="text-title-small">Destinatários</div>
+          <fieldset class="recipient-modes">
+            <label class="role-option">
+              <input v-model="recipientMode" type="radio" value="all" name="recipients" />
+              <span>Todos os usuários</span>
+            </label>
+            <label class="role-option">
+              <input v-model="recipientMode" type="radio" value="selected" name="recipients" />
+              <span>Pessoas selecionadas</span>
+            </label>
+          </fieldset>
+
+          <template v-if="recipientMode === 'selected'">
+            <div v-if="selected.length" class="chips">
+              <span v-for="user in selected" :key="user.id" class="chosen-chip">
+                {{ user.name || user.email }}
+                <button
+                  type="button"
+                  class="chip-remove"
+                  :aria-label="`Remover ${user.name || user.email}`"
+                  @click="toggle(user)"
+                >
+                  <X :size="14" />
+                </button>
+              </span>
+            </div>
+            <AkInput v-model="search" class="users-search" placeholder="Buscar por nome ou e-mail">
+              <template #pre><Search :size="19" aria-hidden="true" /></template>
+            </AkInput>
+            <div v-if="searchError" class="admin-feedback admin-feedback--error">
+              <CircleAlert :size="19" />
+              <span>{{ searchError }}</span>
+            </div>
+            <ul class="user-list">
+              <li v-for="user in found" :key="user.id">
+                <label class="user-option">
+                  <input type="checkbox" :checked="isSelected(user)" @change="toggle(user)" />
+                  <span class="user-name">{{ user.name || user.email }}</span>
+                  <span class="text-muted">{{ user.email }}</span>
+                  <AkStatusChip v-if="!user.enabled" status="DISABLED" />
+                </label>
+              </li>
+            </ul>
+          </template>
+        </section>
+
+        <section class="admin-card">
+          <div class="text-title-small">Enviar</div>
+          <div class="preview-row">
+            <AkButton type="button" :disabled="previewing" @click="showPreview">
+              {{ previewing ? 'Gerando…' : 'Pré-visualizar e-mail' }}
+            </AkButton>
           </div>
-          <AkInput v-model="search" class="users-search" placeholder="Buscar por nome ou e-mail">
-            <template #pre><Search :size="19" aria-hidden="true" /></template>
-          </AkInput>
-          <div v-if="searchError" class="admin-feedback admin-feedback--error">
+          <div v-if="previewError" class="admin-feedback admin-feedback--error preview-error">
             <CircleAlert :size="19" />
-            <span>{{ searchError }}</span>
+            <span>{{ previewError }}</span>
           </div>
-          <ul class="user-list">
-            <li v-for="user in found" :key="user.id">
-              <label class="user-option">
-                <input type="checkbox" :checked="isSelected(user)" @change="toggle(user)" />
-                <span class="user-name">{{ user.name || user.email }}</span>
-                <span class="text-muted">{{ user.email }}</span>
-                <AkStatusChip v-if="!user.enabled" status="DISABLED" />
-              </label>
-            </li>
-          </ul>
-        </template>
-      </section>
-
-      <section class="admin-card">
-        <div class="text-title-small">Enviar</div>
-        <div class="preview-row">
-          <AkButton type="button" :disabled="previewing" @click="showPreview">
-            {{ previewing ? 'Gerando…' : 'Pré-visualizar e-mail' }}
-          </AkButton>
-        </div>
-        <div v-if="previewError" class="admin-feedback admin-feedback--error preview-error">
-          <CircleAlert :size="19" />
-          <span>{{ previewError }}</span>
-        </div>
-        <div v-if="preview" class="preview">
-          <div class="preview-subject">{{ preview.subject }}</div>
-          <div class="preview-body">{{ preview.body }}</div>
-        </div>
-
-        <label class="role-option">
-          <input v-model="anpdInformed" type="checkbox" class="anpd" />
-          <span>Confirmo que a ANPD já foi informada</span>
-        </label>
-
-        <div v-if="sendError" class="admin-feedback admin-feedback--error send-error">
-          <CircleAlert :size="19" />
-          <span>{{ sendError }}</span>
-        </div>
-        <div v-if="result" class="send-result">
-          <div class="admin-feedback admin-feedback--success">
-            <CircleCheckBig :size="19" />
-            <span>{{ resultSummary }}</span>
+          <div v-if="preview" class="preview">
+            <div class="preview-subject">{{ preview.subject }}</div>
+            <div class="preview-body">{{ preview.body }}</div>
           </div>
-          <ul v-if="result.failures.length" class="failures">
-            <li v-for="failure in result.failures" :key="failure.email">
-              {{ failure.email }}: {{ failure.error }}
-            </li>
-          </ul>
-        </div>
 
-        <div class="form-actions">
-          <AkButton type="submit" color="primary" :disabled="!canSend">
-            {{ sending ? 'Enviando…' : 'Enviar aviso' }}
-          </AkButton>
-        </div>
-      </section>
-    </form>
+          <label class="role-option">
+            <input v-model="anpdInformed" type="checkbox" class="anpd" />
+            <span>Confirmo que a ANPD já foi informada</span>
+          </label>
 
-    <AkBreachNoticeHistory ref="history" />
+          <div v-if="sendError" class="admin-feedback admin-feedback--error send-error">
+            <CircleAlert :size="19" />
+            <span>{{ sendError }}</span>
+          </div>
+          <div v-if="result" class="send-result">
+            <div class="admin-feedback admin-feedback--success">
+              <CircleCheckBig :size="19" />
+              <span>{{ resultSummary }}</span>
+            </div>
+            <ul v-if="result.failures.length" class="failures">
+              <li v-for="failure in result.failures" :key="failure.email">
+                {{ failure.email }}: {{ failure.error }}
+              </li>
+            </ul>
+          </div>
+
+          <div class="form-actions">
+            <AkButton type="submit" color="primary" :disabled="!canSend">
+              {{ sending ? 'Enviando…' : 'Enviar aviso' }}
+            </AkButton>
+          </div>
+        </section>
+      </form>
+
+      <AkBreachNoticeHistory
+        ref="history"
+        class="notice-history"
+        @loaded="matchTextCardToHistory"
+      />
+    </div>
   </main>
 </template>
 
@@ -327,11 +354,26 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
   flex-direction: column;
   gap: var(--spacing-2);
 }
+/* The form on the left, the notices sent beside it; stacked on narrow screens. */
+.notice-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr);
+  gap: var(--spacing-6);
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .notice-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .notice-form {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-6);
-  max-width: 56rem;
+  min-width: 0;
+}
+.notice-history {
+  max-width: none;
 }
 .admin-card {
   border: 1px solid var(--color-border);

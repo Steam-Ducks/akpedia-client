@@ -13,6 +13,9 @@ const openId = ref<number | null>(null)
 const detail = ref<BreachNoticeDetail | null>(null)
 const detailError = ref<string | null>(null)
 
+/** After each page loads (or fails to), once it is on screen: the page sizes its form from it. */
+const emit = defineEmits<{ loaded: [] }>()
+
 const formatDate = (date: Date) =>
   date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
@@ -29,6 +32,8 @@ const load = async (target = page.value) => {
     error.value = e instanceof Error ? e.message : 'Não foi possível carregar os avisos enviados.'
     status.value = 'error'
   }
+  await nextTick()
+  emit('loaded')
 }
 
 const toggle = async (id: number) => {

@@ -57,6 +57,16 @@ describe('AkBreachNoticeHistory', () => {
     expect(rows[0].text()).toContain('1 falharam')
   })
 
+  it('tells the page each time a load is over, failed or not, once it is on screen', async () => {
+    const wrapper = await mountHistory()
+    expect(wrapper.emitted('loaded')).toHaveLength(1)
+
+    vi.mocked(fetchBreachNotices).mockRejectedValue(new Error('Falhou.'))
+    await (wrapper.vm as unknown as { reload: () => Promise<void> }).reload()
+    await flushPromises()
+    expect(wrapper.emitted('loaded')).toHaveLength(2)
+  })
+
   it('says when no notice was sent', async () => {
     vi.mocked(fetchBreachNotices).mockResolvedValue(pageOf([]))
 
