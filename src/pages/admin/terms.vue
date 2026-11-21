@@ -2,9 +2,8 @@
 import { CircleAlert, CircleCheckBig } from '@lucide/vue'
 import {
   fetchTermsVersions,
+  nextTermsVersion,
   publishTerms,
-  sameTermsVersion,
-  TERMS_VERSION_PATTERN,
   TermsVersionExistsError,
 } from '@/services/terms'
 import { useTermsStore } from '@/stores/terms-store'
@@ -23,55 +22,31 @@ const versions = ref<TermsVersion[]>([])
 const status = ref<'loading' | 'done' | 'error'>('loading')
 const loadError = ref<string | null>(null)
 
-const version = ref('')
 const title = ref('Termos de uso')
 const content = ref('')
 const publishing = ref(false)
 const publishError = ref<string | null>(null)
-/** The server's `terms_version_exists`, shown under the field until the version is changed. */
-const versionTaken = ref<string | null>(null)
 const published = ref<string | null>(null)
 
-const typedVersion = computed(() => version.value.trim())
-
-/** The newest published is the current one; versions are labels, never compared to find it. */
+/** The newest published is the current one, whatever its number. */
 const currentVersion = computed(() => versions.value[0]?.version ?? null)
+
+/** What the next publish will be numbered, as the server counts it: the next X.0. */
+const nextVersion = computed(() => nextTermsVersion(versions.value.map((entry) => entry.version)))
 
 const versionHint = computed(() =>
   currentVersion.value === null
-    ? 'Primeira versão: por exemplo 1.0.'
-    : `A versão atual é ${currentVersion.value}. Use um número novo.`,
+    ? 'É a primeira versão.'
+    : `A versão atual é ${currentVersion.value}.`,
 )
 
-/** What is wrong with the typed version, if anything; nothing is said while it is empty. */
-const versionError = computed(() => {
-  if (typedVersion.value === '') return null
-  if (!TERMS_VERSION_PATTERN.test(typedVersion.value)) {
-    return 'Use até 20 caracteres: letras, números, ponto, hífen ou sublinhado.'
-  }
-  const repeated = versions.value.find((entry) =>
-    sameTermsVersion(entry.version, typedVersion.value),
-  )
-  if (repeated) return `Já existe a versão ${repeated.version}. Use um número de versão novo.`
-  return versionTaken.value
-})
-
-watch(version, () => {
-  versionTaken.value = null
-})
-
 const canPublish = computed(
-  () =>
-    typedVersion.value !== '' &&
-    versionError.value === null &&
-    title.value.trim() !== '' &&
-    content.value.trim() !== '' &&
-    !publishing.value,
+  () => title.value.trim() !== '' && content.value.trim() !== '' && !publishing.value,
 )
 
 const publishLabel = computed(() => {
   if (publishing.value) return 'Publicando…'
-  return typedVersion.value === '' ? 'Publicar versão' : `Publicar versão ${typedVersion.value}`
+  return `Publicar versão ${nextVersion.value}`
 })
 
 /** The form starts from the current version, so an admin edits it instead of rewriting it. */
@@ -97,7 +72,7 @@ const load = async () => {
 const publish = async () => {
   if (!canPublish.value) return
   const confirmed = await confirmAction({
-    title: `Publicar a versão ${typedVersion.value}?`,
+    title: `Publicar a versão ${nextVersion.value}?`,
     text: CONFIRM_MESSAGE,
     confirmText: 'Publicar',
   })
@@ -108,18 +83,18 @@ const publish = async () => {
 
   try {
     const entry = await publishTerms({
-      version: typedVersion.value,
       title: title.value.trim(),
       content: content.value,
     })
     versions.value = [entry, ...versions.value]
     published.value = entry.version
-    version.value = ''
     // The admin has not accepted the new version either, so this brings up the terms dialog.
     await termsStore.load()
   } catch (e) {
     if (e instanceof TermsVersionExistsError) {
-      versionTaken.value = e.message
+      // Someone published in between: the list catches up, and with it the next number.
+      publishError.value = e.message
+      versions.value = await fetchTermsVersions().catch(() => versions.value)
     } else {
       publishError.value = e instanceof Error ? e.message : 'Não foi possível publicar os termos.'
     }
@@ -136,9 +111,9 @@ onMounted(load)
     <div class="admin-header">
       <div class="text-title-large">Termos de uso</div>
       <div class="text-muted">
-        Cada publicação vira uma nova versão, com o número que você escolher. Todos os usuários
-        precisam aceitar a versão atual, a última publicada, antes de usar o Akpedia; as versões
-        anteriores ficam guardadas como foram publicadas.
+        Cada publicação vira uma nova versão, numerada em sequência: 1.0, 2.0, 3.0. Todos os
+        usuários precisam aceitar a versão atual, a última publicada, antes de usar o Akpedia; as
+        versões anteriores ficam guardadas como foram publicadas.
       </div>
     </div>
 
@@ -154,19 +129,13 @@ onMounted(load)
           {{ versions.length ? 'Publicar nova versão' : 'Publicar a primeira versão' }}
         </div>
 
-        <label class="form-field">
+        <div class="form-field">
           <span class="text-label-small">Versão</span>
-          <AkInput
-            v-model="version"
-            class="version-input"
-            :class="{ 'version-input--invalid': versionError }"
-            placeholder="1.0"
-          />
-          <span v-if="versionError" class="field-hint field-error" role="alert">
-            {{ versionError }}
+          <span class="next-version">{{ nextVersion }}</span>
+          <span class="text-muted field-hint">
+            {{ versionHint }} Cada publicação recebe a próxima versão, em sequência.
           </span>
-          <span v-else class="text-muted field-hint">{{ versionHint }}</span>
-        </label>
+        </div>
 
         <label class="form-field">
           <span class="text-label-small">Título</span>
@@ -272,19 +241,16 @@ onMounted(load)
   flex-direction: column;
   gap: var(--spacing-2);
 }
-/* A version is a few characters: the field stays short. */
-.version-input {
-  max-width: 12rem;
-}
-.version-input--invalid,
-.version-input--invalid:focus-within {
-  border-color: var(--color-wine);
+.next-version {
+  align-self: flex-start;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--round-lg);
+  font-weight: 700;
+  color: var(--color-primary);
+  background-color: var(--color-primary-selected);
 }
 .field-hint {
   font-size: var(--font-sm);
-}
-.field-error {
-  color: var(--color-wine);
 }
 .form-actions {
   display: flex;

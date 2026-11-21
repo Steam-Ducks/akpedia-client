@@ -1,6 +1,9 @@
 /** One published version of the terms of use, as `/api/v1/terms` and `/api/v1/admin/terms` answer it. */
 export type TermsVersionDto = {
-  /** What the admin called this version, such as `1.0` or `2026.1`. A label, not an order. */
+  /**
+   * Numbered by the server in sequence (`1.0`, `2.0`, `3.0`). Versions published
+   * before the numbering may hold other labels. The current one is the newest published, not the highest.
+   */
   version: string
   title: string
   /** Plain text, paragraphs separated by blank lines. Never rendered as HTML. */
@@ -37,10 +40,8 @@ export type TermsAcceptance = {
   acceptedAt: Date
 }
 
-/** What an admin fills in to publish a new version. */
+/** What an admin fills in to publish a new version; the server numbers it, the next `X.0`. */
 export type TermsDraft = {
-  /** Typed by the admin: 1–20 letters, digits, `.`, `-` or `_`, new in any case. */
-  version: string
   title: string
   content: string
 }
