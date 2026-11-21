@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import AkDatePicker from '@/components/design-system/AkDatePicker.vue'
 import AdminAuditPage from '../admin/audit.vue'
 import { fetchAuditActions, fetchAuditLog } from '@/services/audit'
 import type { AuditEntry } from '@/types/Audit'
@@ -155,8 +156,8 @@ describe('admin audit page', () => {
     await wrapper.get('.filter-kind select').setValue('ALL')
     await wrapper.get('.filter-action select').setValue('DOCUMENT_APPROVED')
     await wrapper.get('.filter-user input').setValue('ana')
-    await wrapper.get('.filter-from input').setValue('2026-11-01')
-    await wrapper.get('.filter-to input').setValue('2026-11-07')
+    await wrapper.getComponent<typeof AkDatePicker>('.filter-from').setValue('2026-11-01')
+    await wrapper.getComponent<typeof AkDatePicker>('.filter-to').setValue('2026-11-07')
     await vi.advanceTimersByTimeAsync(300)
 
     expect(fetchAuditLog).toHaveBeenCalledTimes(2)
