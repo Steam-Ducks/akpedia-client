@@ -2,6 +2,7 @@
 type Props = {
   placeholder?: string
   rows?: number
+  maxlength?: number
 }
 
 withDefaults(defineProps<Props>(), { rows: 3 })
@@ -11,7 +12,12 @@ const model = defineModel<string>({ default: '' })
 
 <template>
   <div class="ak-textarea">
-    <textarea v-model="model" :placeholder="placeholder" :rows="rows"></textarea>
+    <textarea
+      v-model="model"
+      :placeholder="placeholder"
+      :rows="rows"
+      :maxlength="maxlength"
+    ></textarea>
   </div>
 </template>
 

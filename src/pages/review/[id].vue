@@ -17,6 +17,8 @@ import { fetchCategories } from '@/services/search'
 import type { Category } from '@/types/SearchResult'
 import type { PendingDocument } from '@/services/pending-mapper'
 
+definePage({ meta: { roles: ['APPROVER', 'ADMIN'] } })
+
 /** How long the pages stay hidden after a screen capture key is seen. */
 const CAPTURE_SHIELD_MS = 2000
 const MIN_ZOOM = 0.5

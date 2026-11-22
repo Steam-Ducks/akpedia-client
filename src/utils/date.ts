@@ -30,3 +30,10 @@ export function formatUpdatedAgo(date: Date): string {
   const diffYears = Math.floor(diffDays / 365)
   return `atualizado há ${diffYears} ${diffYears === 1 ? 'ano' : 'anos'}`
 }
+
+/** Date and time to the second, e.g. "07/11/2026, 14:03:21". */
+export const formatDateTime = (date: Date): string =>
+  date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'medium' })
+
+export const formatGreetingDate = (date: Date): string =>
+  date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
