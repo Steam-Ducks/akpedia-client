@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { CircleAlert } from '@lucide/vue'
-import { fetchTermsAcceptances } from '@/services/terms'
-import type { TermsAcceptanceEntry, TermsVersion } from '@/types/Terms'
+import { fetchTermsHistory } from '@/services/terms'
+import type { TermsHistoryEntry, TermsVersion } from '@/types/Terms'
 import { formatDateTime } from '@/utils/date'
+import { TERMS_HISTORY_ACTION_LABELS } from '@/utils/terms-history'
+
+/**
+ * What each user did with each version of the terms: accepted it, changed an optional permission
+ * afterwards, or declined it. Each row opens the optional permissions of its version.
+ */
 
 const props = defineProps<{ versions: TermsVersion[] }>()
 
@@ -12,7 +18,8 @@ const FILTER_DELAY_MS = 300
 const version = ref('')
 const user = ref('')
 
-const entries = ref<TermsAcceptanceEntry[]>([])
+const entries = ref<TermsHistoryEntry[]>([])
+const opened = ref<TermsHistoryEntry | null>(null)
 const page = ref(0)
 const totalPages = ref(0)
 const status = ref<'loading' | 'done' | 'error'>('loading')
@@ -25,7 +32,7 @@ const load = async () => {
   status.value = 'loading'
   loadError.value = null
   try {
-    const result = await fetchTermsAcceptances({
+    const result = await fetchTermsHistory({
       version: version.value,
       user: user.value,
       page: page.value,
@@ -37,7 +44,7 @@ const load = async () => {
     status.value = 'done'
   } catch (e) {
     if (request !== latestRequest) return
-    loadError.value = e instanceof Error ? e.message : 'Não foi possível carregar os aceites.'
+    loadError.value = e instanceof Error ? e.message : 'Não foi possível carregar o histórico.'
     status.value = 'error'
   }
 }
@@ -71,7 +78,7 @@ onBeforeUnmount(() => clearTimeout(filterTimer))
 
 <template>
   <section class="admin-card acceptances">
-    <div class="text-title-small">Quem aceitou</div>
+    <div class="text-title-small">Histórico dos termos</div>
 
     <form class="acceptance-filters" @submit.prevent>
       <label class="form-field">
@@ -90,14 +97,14 @@ onBeforeUnmount(() => clearTimeout(filterTimer))
     </form>
 
     <div v-if="status === 'loading' && entries.length === 0" class="text-muted">
-      Carregando os aceites…
+      Carregando o histórico…
     </div>
     <div v-else-if="status === 'error'" class="admin-feedback admin-feedback--error">
       <CircleAlert :size="19" />
       <span>{{ loadError }}</span>
     </div>
     <div v-else-if="entries.length === 0" class="text-muted acceptances-empty">
-      Nenhum aceite com esses filtros.
+      Nenhum registro com esses filtros.
     </div>
 
     <template v-else>
@@ -108,15 +115,31 @@ onBeforeUnmount(() => clearTimeout(filterTimer))
               <th scope="col">Funcionário</th>
               <th scope="col">E-mail</th>
               <th scope="col">Versão</th>
-              <th scope="col">Aceito em</th>
+              <th scope="col">Ação</th>
+              <th scope="col">Quando</th>
+              <th scope="col"><span class="visually-hidden">Permissões</span></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="entry in entries" :key="entry.id" class="acceptance-row">
+            <tr
+              v-for="entry in entries"
+              :key="`${entry.action}-${entry.id}`"
+              class="acceptance-row"
+            >
               <td class="text-bold">{{ entry.userName ?? '—' }}</td>
               <td>{{ entry.userEmail ?? '—' }}</td>
               <td>{{ entry.version }}</td>
-              <td class="nowrap">{{ formatDateTime(entry.acceptedAt) }}</td>
+              <td class="nowrap">
+                <span :class="['action-tag', `action-tag--${entry.action}`]">
+                  {{ TERMS_HISTORY_ACTION_LABELS[entry.action] }}
+                </span>
+              </td>
+              <td class="nowrap">{{ formatDateTime(entry.at) }}</td>
+              <td class="nowrap">
+                <button type="button" class="open-permissions" @click="opened = entry">
+                  Ver permissões
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -124,6 +147,8 @@ onBeforeUnmount(() => clearTimeout(filterTimer))
 
       <AkPaginator :page="page" :total-pages="totalPages" @change="changePage" />
     </template>
+
+    <AkTermsHistoryDialog v-if="opened" :entry="opened" @close="opened = null" />
   </section>
 </template>
 
@@ -183,6 +208,46 @@ onBeforeUnmount(() => clearTimeout(filterTimer))
   border-bottom: none;
 }
 .nowrap {
+  white-space: nowrap;
+}
+.open-permissions {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.open-permissions:hover {
+  text-decoration-thickness: 2px;
+}
+.action-tag {
+  display: inline-block;
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--round-lg);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+.action-tag--accepted {
+  color: var(--color-primary);
+  background-color: var(--color-primary-muted);
+}
+.action-tag--updated {
+  color: var(--color-text);
+  background-color: var(--color-grey-lightest);
+}
+.action-tag--declined {
+  color: var(--color-wine);
+  background-color: var(--color-wine-lighest);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
   white-space: nowrap;
 }
 </style>

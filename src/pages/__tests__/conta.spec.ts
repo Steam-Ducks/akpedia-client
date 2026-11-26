@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { ref } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
 import AccountPage from '../conta.vue'
 import { deleteMyAccount } from '@/services/account'
 import { logout, refreshSession, type SessionUser } from '@/services/auth'
@@ -27,6 +28,11 @@ vi.mock('@/services/auth', () => ({
 }))
 
 vi.mock('@/services/account', () => ({ deleteMyAccount: vi.fn() }))
+vi.mock('@/services/optional-permissions', () => ({
+  fetchOptionalPermissions: vi.fn().mockResolvedValue({ version: '1.0', permissions: [] }),
+  chooseOptionalPermission: vi.fn(),
+  OptionalPermissionsChangedError: class extends Error {},
+}))
 
 vi.mock('@/services/profile', () => ({
   fetchMyProfile: vi.fn(),
@@ -80,6 +86,7 @@ describe('account page', () => {
       isAdmin: false,
     }
     vi.mocked(fetchMyProfile).mockResolvedValue({ ...profile })
+    setActivePinia(createPinia())
     vi.mocked(fetchMyChangeRequests).mockResolvedValue([])
   })
 

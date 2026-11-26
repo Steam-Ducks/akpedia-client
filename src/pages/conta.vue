@@ -369,6 +369,8 @@ onMounted(() => {
           </ul>
         </section>
 
+        <AkOptionalPermissionsSettings />
+
         <section class="account-card danger-zone">
           <div class="text-title-small">Excluir conta</div>
           <div class="text-muted">
