@@ -1,3 +1,5 @@
+import type { OptionalPermission, OptionalPermissionDraft } from '@/types/OptionalPermissions'
+
 /** One published version of the terms of use, as `/api/v1/terms` and `/api/v1/admin/terms` answer it. */
 export type TermsVersionDto = {
   /**
@@ -10,6 +12,8 @@ export type TermsVersionDto = {
   content: string
   published_at: string
   published_by: string | null
+  /** What users may agree to without being required to. Older servers may leave it out. */
+  optional_permissions?: OptionalPermission[]
 }
 
 /** The newest version this user accepted. */
@@ -33,6 +37,7 @@ export type TermsVersion = {
   content: string
   publishedAt: Date
   publishedBy: string | null
+  optionalPermissions: OptionalPermission[]
 }
 
 export type TermsAcceptance = {
@@ -44,27 +49,80 @@ export type TermsAcceptance = {
 export type TermsDraft = {
   title: string
   content: string
+  /** Adding, changing or removing one is what makes a new version: everyone accepts it again. */
+  optionalPermissions: OptionalPermissionDraft[]
 }
 
-export type TermsAcceptanceEntryDto = {
+/**
+ * What a user did with a version: accepted it, turned an optional permission on or off afterwards
+ * (on their account page), or declined it.
+ */
+export type TermsHistoryAction = 'accepted' | 'updated' | 'declined'
+
+/** One entry of `GET /api/v1/admin/terms/history`. `id` is unique only together with `action`. */
+export type TermsHistoryEntryDto = {
+  action: TermsHistoryAction
   id: number
   version: string
-  user_id: number
+  user_id: number | null
   user_name: string | null
   user_email: string | null
-  accepted_at: string
+  at: string
 }
 
-export type TermsAcceptanceEntry = {
+export type TermsHistoryEntry = {
+  action: TermsHistoryAction
   id: number
   version: string
-  userId: number
+  userId: number | null
   userName: string | null
   userEmail: string | null
-  acceptedAt: Date
+  at: Date
 }
 
-export type TermsAcceptanceFilters = {
+export type TermsHistoryPermissionDto = {
+  id: string
+  label: string
+  description: string
+  /** Right before the entry; `null` when the user had not chosen yet. */
+  granted_before: boolean | null
+  /** Right after it; the same as before for a refusal, which changes nothing. */
+  granted_after: boolean | null
+  /** The permission an `updated` entry turned on or off. */
+  changed: boolean
+}
+
+/** Answer of `GET /api/v1/admin/terms/history/{action}/{id}`. */
+export type TermsHistoryDetailDto = {
+  action: TermsHistoryAction
+  id: number
+  version: string | null
+  user_name: string | null
+  user_email: string | null
+  at: string
+  permissions: TermsHistoryPermissionDto[]
+}
+
+export type TermsHistoryPermission = {
+  id: string
+  label: string
+  description: string
+  grantedBefore: boolean | null
+  grantedAfter: boolean | null
+  changed: boolean
+}
+
+export type TermsHistoryDetail = {
+  action: TermsHistoryAction
+  id: number
+  version: string | null
+  userName: string | null
+  userEmail: string | null
+  at: Date
+  permissions: TermsHistoryPermission[]
+}
+
+export type TermsHistoryFilters = {
   version?: string
   user?: string
   page?: number

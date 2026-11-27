@@ -3,7 +3,8 @@ import {
   acceptTerms,
   declineTerms,
   fetchTerms,
-  fetchTermsAcceptances,
+  fetchTermsHistory,
+  fetchTermsHistoryEntry,
   publishTerms,
   nextTermsVersion,
   TermsChangedError,
@@ -65,7 +66,7 @@ describe('terms service', () => {
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toContain('/api/v1/terms/accept')
     expect(init.method).toBe('POST')
-    expect(JSON.parse(init.body)).toEqual({ version: '3.0' })
+    expect(JSON.parse(init.body)).toEqual({ version: '3.0', optional_permissions: {} })
   })
 
   it('tells a 409 terms_changed apart from other failures', async () => {
@@ -88,6 +89,7 @@ describe('terms service', () => {
     const published = await publishTerms({
       title: 'Termos de uso',
       content: 'Texto.',
+      optionalPermissions: [],
     })
 
     const [url, init] = fetchMock.mock.calls[0]
@@ -95,6 +97,7 @@ describe('terms service', () => {
     expect(JSON.parse(init.body)).toEqual({
       title: 'Termos de uso',
       content: 'Texto.',
+      optional_permissions: [],
     })
     expect(published.version).toBe('3.0')
   })
@@ -112,7 +115,7 @@ describe('terms service', () => {
       }),
     )
 
-    const publishing = publishTerms({ title: 'Termos', content: 'Texto.' })
+    const publishing = publishTerms({ title: 'Termos', content: 'Texto.', optionalPermissions: [] })
 
     await expect(publishing).rejects.toBeInstanceOf(TermsVersionExistsError)
     await expect(publishing).rejects.toThrow('Já existe a versão 1.0.')
@@ -163,18 +166,19 @@ describe('terms service', () => {
     await expect(declineTerms('3.0')).rejects.toThrow('Os termos mudaram.')
   })
 
-  it('asks for a page of acceptances with only the filters that are set', async () => {
+  it('asks for a page of the history with only the filters that are set', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         content: [
           {
             id: 7,
+            action: 'updated',
             version: '2.0',
             user_id: 3,
             user_name: 'Ana Souza',
             user_email: 'ana@akaer.com',
-            accepted_at: '2026-11-01T10:00:00Z',
+            at: '2026-11-01T10:00:00Z',
           },
         ],
         page: 1,
@@ -185,32 +189,71 @@ describe('terms service', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const page = await fetchTermsAcceptances({ version: '2.0', user: ' ana ', page: 1 })
+    const page = await fetchTermsHistory({ version: '2.0', user: ' ana ', page: 1 })
 
     const [url] = fetchMock.mock.calls[0]
-    expect(url).toContain('/api/v1/admin/terms/acceptances?page=1&size=20&version=2.0&user=ana')
+    expect(url).toContain('/api/v1/admin/terms/history?page=1&size=20&version=2.0&user=ana')
     expect(page.totalPages).toBe(2)
     expect(page.content[0]).toEqual({
+      action: 'updated',
       id: 7,
       version: '2.0',
       userId: 3,
       userName: 'Ana Souza',
       userEmail: 'ana@akaer.com',
-      acceptedAt: new Date('2026-11-01T10:00:00Z'),
+      at: new Date('2026-11-01T10:00:00Z'),
     })
 
-    await fetchTermsAcceptances()
-    expect(fetchMock.mock.calls[1][0]).toMatch(/acceptances\?page=0&size=20$/)
+    await fetchTermsHistory()
+    expect(fetchMock.mock.calls[1][0]).toMatch(/history\?page=0&size=20$/)
   })
 
-  it('reports a failed load of the acceptances', async () => {
+  it('loads one entry of the history with its permissions', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        action: 'accepted',
+        id: 7,
+        version: '2.0',
+        user_name: 'Ana Souza',
+        user_email: 'ana@akaer.com',
+        at: '2026-11-01T10:00:00Z',
+        permissions: [
+          {
+            id: 'newsletter',
+            label: 'Newsletter',
+            description: 'E-mails',
+            granted_before: null,
+            granted_after: true,
+            changed: false,
+          },
+        ],
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const detail = await fetchTermsHistoryEntry('accepted', 7)
+
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/admin/terms/history/accepted/7')
+    expect(detail.at).toEqual(new Date('2026-11-01T10:00:00Z'))
+    expect(detail.permissions[0]).toEqual({
+      id: 'newsletter',
+      label: 'Newsletter',
+      description: 'E-mails',
+      grantedBefore: null,
+      grantedAfter: true,
+      changed: false,
+    })
+  })
+
+  it('reports a failed load of the history', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }),
     )
 
-    await expect(fetchTermsAcceptances()).rejects.toThrow(
-      'Não foi possível carregar os aceites dos termos (HTTP 500).',
+    await expect(fetchTermsHistory()).rejects.toThrow(
+      'Não foi possível carregar o histórico dos termos (HTTP 500).',
     )
   })
 })

@@ -24,6 +24,7 @@ const version = (number: string): TermsVersion => ({
   content: 'Primeiro parágrafo.\n\nSegundo parágrafo <b>sem HTML</b>.',
   publishedAt: new Date('2026-11-06T12:00:00'),
   publishedBy: 'Admin Akpedia',
+  optionalPermissions: [],
 })
 
 /** Mounts the page once GET /terms answered with these terms. */
@@ -111,6 +112,28 @@ describe('accept-terms page', () => {
     await wrapper.get('.terms-accept').trigger('click')
 
     expect(accept).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('offers the optional permissions unticked, and sends what the user chose with the acceptance', async () => {
+    const wrapper = await mountPage({
+      ...version('3.0'),
+      optionalPermissions: [
+        { id: 'newsletter', label: 'Newsletter mensal', description: 'Um e-mail por mês.' },
+        { id: 'analytics', label: 'Análise de uso', description: 'Sem o seu nome.' },
+      ],
+    })
+    const accept = vi.spyOn(useTermsStore(), 'accept').mockResolvedValue()
+
+    const boxes = wrapper.findAll('.terms-optional input[type="checkbox"]')
+    expect(boxes).toHaveLength(2)
+    expect(boxes.every((box) => !(box.element as HTMLInputElement).checked)).toBe(true)
+
+    await boxes[0]!.setValue(true)
+    await wrapper.get('.terms-agree-box').setValue(true)
+    await wrapper.get('.terms-accept').trigger('click')
+
+    expect(accept).toHaveBeenCalledWith({ newsletter: true, analytics: false })
     wrapper.unmount()
   })
 

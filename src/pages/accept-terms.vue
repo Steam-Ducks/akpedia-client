@@ -16,12 +16,22 @@ const card = ref<HTMLElement | null>(null)
 /** Accepting takes ticking the box first: the user says they read the text. */
 const agreed = ref(false)
 
+/**
+ * The user's choice for each optional permission of this version. They start unticked (pre-ticked
+ * boxes aren't valid consent), and leaving them so never limits what the user can do.
+ */
+const optional = ref<Record<string, boolean>>({})
+
 // A newer version came in while this one was on screen: it has to be read and ticked again.
 watch(
   () => current.value?.version,
   () => {
     agreed.value = false
+    optional.value = Object.fromEntries(
+      (current.value?.optionalPermissions ?? []).map((p) => [p.id, false]),
+    )
   },
+  { immediate: true },
 )
 
 /**
@@ -76,6 +86,21 @@ onMounted(async () => {
         <span>Li e aceito os termos de uso da versão {{ current.version }}.</span>
       </label>
 
+      <fieldset v-if="current.optionalPermissions.length" class="terms-optional">
+        <legend class="text-title-small">Permissões opcionais</legend>
+        <div class="text-muted">
+          Nada disso é obrigatório: recusar não limita o que você pode fazer no Akpedia, e você pode
+          mudar de ideia a qualquer momento em Minha conta.
+        </div>
+        <label v-for="p in current.optionalPermissions" :key="p.id" class="terms-optional-item">
+          <input v-model="optional[p.id]" type="checkbox" :name="p.id" />
+          <span>
+            <strong>{{ p.label }}</strong>
+            <span class="text-muted terms-optional-description">{{ p.description }}</span>
+          </span>
+        </label>
+      </fieldset>
+
       <div v-if="error" class="terms-error" role="alert">
         <CircleAlert :size="19" />
         <span>{{ error }}</span>
@@ -98,7 +123,7 @@ onMounted(async () => {
           class="terms-accept"
           :disabled="accepting || !agreed"
           :title="agreed ? '' : 'Marque que leu e aceita os termos para continuar.'"
-          @click="termsStore.accept()"
+          @click="termsStore.accept(optional)"
         >
           {{ accepting ? 'Aceitando…' : 'Aceitar' }}
         </AkButton>
@@ -120,6 +145,28 @@ onMounted(async () => {
 </template>
 
 <style lang="css" scoped>
+.terms-optional {
+  margin: 0;
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--round-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+.terms-optional-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  cursor: pointer;
+}
+.terms-optional-item input {
+  margin-top: 3px;
+}
+.terms-optional-description {
+  display: block;
+  margin-top: var(--spacing-1);
+}
 .ak-accept-terms {
   height: 100%;
   overflow-y: auto;

@@ -41,13 +41,14 @@ export const useTermsStore = defineStore('terms', () => {
     }
   }
 
-  const accept = async () => {
+  /** `optional`: the user's choice for each optional permission of the version, by id. */
+  const accept = async (optional: Record<string, boolean> = {}) => {
     if (!current.value) return
     accepting.value = true
     error.value = null
 
     try {
-      accepted.value = await acceptTerms(current.value.version)
+      accepted.value = await acceptTerms(current.value.version, optional)
       pending.value = false
     } catch (e) {
       if (e instanceof TermsChangedError) {

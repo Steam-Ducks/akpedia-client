@@ -5,9 +5,12 @@ import type { Page, PageDto } from '@/types/Page'
 import type {
   TermsAcceptance,
   TermsAcceptanceDto,
-  TermsAcceptanceEntry,
-  TermsAcceptanceEntryDto,
-  TermsAcceptanceFilters,
+  TermsHistoryAction,
+  TermsHistoryDetail,
+  TermsHistoryDetailDto,
+  TermsHistoryEntry,
+  TermsHistoryEntryDto,
+  TermsHistoryFilters,
   TermsDraft,
   TermsStatusDto,
   TermsVersion,
@@ -42,6 +45,7 @@ export const toTermsVersion = (dto: TermsVersionDto): TermsVersion => ({
   content: dto.content,
   publishedAt: new Date(dto.published_at),
   publishedBy: dto.published_by,
+  optionalPermissions: dto.optional_permissions ?? [],
 })
 
 const toTermsAcceptance = (dto: TermsAcceptanceDto): TermsAcceptance => ({
@@ -49,13 +53,31 @@ const toTermsAcceptance = (dto: TermsAcceptanceDto): TermsAcceptance => ({
   acceptedAt: new Date(dto.accepted_at),
 })
 
-const toTermsAcceptanceEntry = (dto: TermsAcceptanceEntryDto): TermsAcceptanceEntry => ({
+const toTermsHistoryEntry = (dto: TermsHistoryEntryDto): TermsHistoryEntry => ({
+  action: dto.action,
   id: dto.id,
   version: dto.version,
   userId: dto.user_id,
   userName: dto.user_name,
   userEmail: dto.user_email,
-  acceptedAt: new Date(dto.accepted_at),
+  at: new Date(dto.at),
+})
+
+const toTermsHistoryDetail = (dto: TermsHistoryDetailDto): TermsHistoryDetail => ({
+  action: dto.action,
+  id: dto.id,
+  version: dto.version,
+  userName: dto.user_name,
+  userEmail: dto.user_email,
+  at: new Date(dto.at),
+  permissions: dto.permissions.map((p) => ({
+    id: p.id,
+    label: p.label,
+    description: p.description,
+    grantedBefore: p.granted_before,
+    grantedAfter: p.granted_after,
+    changed: p.changed,
+  })),
 })
 
 async function send<T>(path: string, init: RequestInit, failure: string): Promise<T> {
@@ -97,11 +119,17 @@ export async function fetchTerms(): Promise<{
   }
 }
 
-/** Accepts `version`, which must still be the current one. */
-export async function acceptTerms(version: string): Promise<TermsAcceptance> {
+/**
+ * Accepts `version`, which must still be the current one, with the user's choice for each of its
+ * optional permissions (any left out is not allowed).
+ */
+export async function acceptTerms(
+  version: string,
+  optionalPermissions: Record<string, boolean> = {},
+): Promise<TermsAcceptance> {
   const accepted = await send<TermsAcceptanceDto>(
     '/api/v1/terms/accept',
-    postJson({ version }),
+    postJson({ version, optional_permissions: optionalPermissions }),
     'Não foi possível aceitar os termos de uso',
   )
   return toTermsAcceptance(accepted)
@@ -138,29 +166,49 @@ export async function fetchTermsVersions(): Promise<TermsVersion[]> {
 export async function publishTerms(draft: TermsDraft): Promise<TermsVersion> {
   const published = await send<TermsVersionDto>(
     '/api/v1/admin/terms',
-    postJson(draft),
+    postJson({
+      title: draft.title,
+      content: draft.content,
+      optional_permissions: draft.optionalPermissions,
+    }),
     'Não foi possível publicar os termos de uso',
   )
   return toTermsVersion(published)
 }
 
-const ACCEPTANCES_PAGE_SIZE = 20
+const HISTORY_PAGE_SIZE = 20
 
-/** Who accepted which version, newest first. Only the filters that are set are sent. Admins only. */
-export async function fetchTermsAcceptances(
-  filters: TermsAcceptanceFilters = {},
-): Promise<Page<TermsAcceptanceEntry>> {
+/**
+ * What each user did with each version (accepted, updated an optional permission, declined),
+ * newest first. Only the filters that are set are sent. Admins only.
+ */
+export async function fetchTermsHistory(
+  filters: TermsHistoryFilters = {},
+): Promise<Page<TermsHistoryEntry>> {
   const params = new URLSearchParams({
     page: String(filters.page ?? 0),
-    size: String(filters.size ?? ACCEPTANCES_PAGE_SIZE),
+    size: String(filters.size ?? HISTORY_PAGE_SIZE),
   })
   if (filters.version) params.set('version', filters.version)
   if (filters.user?.trim()) params.set('user', filters.user.trim())
 
-  const entries = await send<PageDto<TermsAcceptanceEntryDto>>(
-    `/api/v1/admin/terms/acceptances?${params}`,
+  const entries = await send<PageDto<TermsHistoryEntryDto>>(
+    `/api/v1/admin/terms/history?${params}`,
     {},
-    'Não foi possível carregar os aceites dos termos',
+    'Não foi possível carregar o histórico dos termos',
   )
-  return toPage(entries, toTermsAcceptanceEntry)
+  return toPage(entries, toTermsHistoryEntry)
+}
+
+/** One entry of the history with the optional permissions of its version, before and after it. Admins only. */
+export async function fetchTermsHistoryEntry(
+  action: TermsHistoryAction,
+  id: number,
+): Promise<TermsHistoryDetail> {
+  const detail = await send<TermsHistoryDetailDto>(
+    `/api/v1/admin/terms/history/${action}/${id}`,
+    {},
+    'Não foi possível carregar as permissões deste registro',
+  )
+  return toTermsHistoryDetail(detail)
 }

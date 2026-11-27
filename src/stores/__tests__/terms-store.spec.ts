@@ -17,6 +17,7 @@ const version = (number: string): TermsVersion => ({
   content: `Texto da versão ${number}.`,
   publishedAt: new Date('2026-11-06T12:00:00Z'),
   publishedBy: 'Admin Akpedia',
+  optionalPermissions: [],
 })
 
 const acceptance = (number: string) => ({ version: number, acceptedAt: new Date() })
@@ -73,7 +74,7 @@ describe('terms store', () => {
 
     await store.accept()
 
-    expect(acceptTerms).toHaveBeenCalledWith('2.0')
+    expect(acceptTerms).toHaveBeenCalledWith('2.0', {})
     expect(store.pending).toBe(false)
     expect(store.error).toBeNull()
   })

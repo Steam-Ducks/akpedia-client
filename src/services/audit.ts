@@ -28,6 +28,7 @@ const LABEL_BY_ACTION: Record<string, string> = {
   PROFILE_CHANGE_REJECTED: 'Recusou uma alteração de e-mail ou CPF',
   USER_UPDATED: 'Alterou os dados de um usuário',
   SECTOR_CATEGORIES_CHANGED: 'Alterou as categorias de um setor',
+  OPTIONAL_PERMISSION_CHOSEN: 'Alterou uma permissão opcional',
 }
 
 const LABEL_BY_ENTITY: Record<string, string> = {

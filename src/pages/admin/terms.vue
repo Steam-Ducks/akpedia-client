@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleAlert, CircleCheckBig } from '@lucide/vue'
+import { CircleAlert, CircleCheckBig, Plus, X } from '@lucide/vue'
 import {
   fetchTermsVersions,
   nextTermsVersion,
@@ -7,6 +7,7 @@ import {
   TermsVersionExistsError,
 } from '@/services/terms'
 import { useTermsStore } from '@/stores/terms-store'
+import type { OptionalPermissionDraft } from '@/types/OptionalPermissions'
 import type { TermsVersion } from '@/types/Terms'
 import { confirmAction } from '@/utils/confirm'
 import { formatDate } from '@/utils/date'
@@ -40,8 +41,25 @@ const versionHint = computed(() =>
     : `A versão atual é ${currentVersion.value}.`,
 )
 
+/**
+ * The optional permissions of the next version. Kept ones carry their id; adding, changing or
+ * removing one is part of publishing, so everyone accepts the terms again.
+ */
+const optionalPermissions = ref<OptionalPermissionDraft[]>([])
+
+const addOptional = () => optionalPermissions.value.push({ id: null, label: '', description: '' })
+const removeOptional = (index: number) => optionalPermissions.value.splice(index, 1)
+
+const optionalComplete = computed(() =>
+  optionalPermissions.value.every((p) => p.label.trim() !== '' && p.description.trim() !== ''),
+)
+
 const canPublish = computed(
-  () => title.value.trim() !== '' && content.value.trim() !== '' && !publishing.value,
+  () =>
+    title.value.trim() !== '' &&
+    content.value.trim() !== '' &&
+    optionalComplete.value &&
+    !publishing.value,
 )
 
 const publishLabel = computed(() => {
@@ -54,6 +72,7 @@ const fillForm = (latest: TermsVersion | undefined) => {
   if (!latest) return
   title.value = latest.title
   content.value = latest.content
+  optionalPermissions.value = latest.optionalPermissions.map((p) => ({ ...p }))
 }
 
 const load = async () => {
@@ -85,9 +104,16 @@ const publish = async () => {
     const entry = await publishTerms({
       title: title.value.trim(),
       content: content.value,
+      optionalPermissions: optionalPermissions.value.map((p) => ({
+        id: p.id || null,
+        label: p.label.trim(),
+        description: p.description.trim(),
+      })),
     })
     versions.value = [entry, ...versions.value]
     published.value = entry.version
+    // New permissions got their ids: editing on from here keeps them.
+    fillForm(entry)
     // The admin has not accepted the new version either, so this brings up the terms dialog.
     await termsStore.load()
   } catch (e) {
@@ -151,6 +177,39 @@ onMounted(load)
           />
         </label>
 
+        <div class="form-field">
+          <span class="text-label-small">Permissões opcionais</span>
+          <span class="text-muted field-hint">
+            O que os usuários podem permitir sem serem obrigados, como e-mails sobre novidades.
+            Recusar não limita nada. Fazem parte dos termos: adicionar, alterar ou remover uma
+            publica uma nova versão, e as escolhas de todos recomeçam desmarcadas.
+          </span>
+          <div
+            v-for="(permission, index) in optionalPermissions"
+            :key="permission.id ?? `new-${index}`"
+            class="optional-draft"
+          >
+            <div class="optional-draft-head">
+              <code v-if="permission.id" class="text-muted optional-id">{{ permission.id }}</code>
+              <span v-else class="optional-new">Nova</span>
+              <button
+                type="button"
+                class="optional-remove"
+                :aria-label="`Remover ${permission.label || 'permissão'}`"
+                @click="removeOptional(index)"
+              >
+                <X :size="16" />
+              </button>
+            </div>
+            <AkInput v-model="permission.label" placeholder="Nome, ex.: Newsletter mensal" />
+            <AkTextarea
+              v-model="permission.description"
+              :rows="2"
+              placeholder="O que o usuário está permitindo."
+            />
+          </div>
+        </div>
+
         <div v-if="publishError" class="admin-feedback admin-feedback--error">
           <CircleAlert :size="19" />
           <span>{{ publishError }}</span>
@@ -161,6 +220,10 @@ onMounted(load)
         </div>
 
         <div class="form-actions">
+          <AkButton type="button" class="optional-add" @click="addOptional">
+            <Plus :size="16" />
+            Adicionar permissão opcional
+          </AkButton>
           <AkButton type="submit" color="primary" :disabled="!canPublish">
             {{ publishLabel }}
           </AkButton>
@@ -193,6 +256,15 @@ onMounted(load)
               <template v-if="version.publishedBy"> por {{ version.publishedBy }}</template>
             </div>
             <div class="version-content">{{ version.content }}</div>
+            <div v-if="version.optionalPermissions.length" class="version-optional">
+              <div class="text-label-small">Permissões opcionais</div>
+              <ul>
+                <li v-for="p in version.optionalPermissions" :key="p.id">
+                  <strong>{{ p.label }}</strong>
+                  <span class="text-muted"> — {{ p.description }}</span>
+                </li>
+              </ul>
+            </div>
           </AkAccordion>
         </div>
       </section>
@@ -252,9 +324,16 @@ onMounted(load)
 .field-hint {
   font-size: var(--font-sm);
 }
+/* Side by side; on a narrow screen the publish button wraps below, still on the right. */
 .form-actions {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+.form-actions > :last-child {
+  margin-left: auto;
 }
 .admin-feedback {
   display: flex;
@@ -321,6 +400,45 @@ onMounted(load)
 }
 .version-meta {
   margin-bottom: var(--spacing-3);
+}
+.optional-draft {
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--round-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+.optional-draft-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.optional-id {
+  font-size: var(--font-sm);
+}
+.optional-new {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--color-primary);
+}
+.optional-remove {
+  display: inline-flex;
+  padding: var(--spacing-1);
+  border-radius: var(--round-lg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.optional-remove:hover {
+  color: var(--color-wine);
+  background-color: var(--color-background-hover);
+}
+.version-optional {
+  margin-top: var(--spacing-4);
+}
+.version-optional ul {
+  margin: var(--spacing-2) 0 0;
+  padding-left: var(--spacing-5);
 }
 .version-content {
   white-space: pre-line;
